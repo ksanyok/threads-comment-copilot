@@ -26,7 +26,7 @@ function buildMessages(s, text, author, product, tone, samples) {
   const focusBlock = (product && product.name)
     ? `\nFOCUS PRODUCT: the user picked this post specifically to write about ${product.name}. Feature ${product.name} (${product.desc}).${product.url ? ' You may add its link once: ' + product.url + '.' : ''} Introduce it naturally and value-first, describe it accurately, no hard sell. Do not mention other products.\n`
     : '';
-  const toneBlock = tone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): make this comment genuinely witty with light sarcasm — a small joke or playful jab, still kind and never offensive. Even if the post is serious, keep it light and funny. The result MUST read clearly more humorous than a neutral reply.\n'
+  const toneBlock = tone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): make this genuinely witty with real sarcasm — a sharp, playful one-liner that riffs on THIS post. If the post is a joke or meme, match it with a clever sarcastic quip and do NOT explain anything or recommend any product. A funny reply beats a helpful one here. Still kind, never offensive, never a sales pitch.\n'
     : tone === 'mentor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): write as a calm, experienced mentor — serious, structured, concrete step-by-step advice from experience. No jokes, no sarcasm, no small talk.\n'
     : '';
 
@@ -49,7 +49,8 @@ HARD CONSTRAINTS:
 - Must be relevant and add genuine value (insight, experience, or a sincere question).
 - Describe any product ACCURATELY (see RULES) — never invent vague positioning.
 - No hashtags, no @mentions. NEVER copy or cite any link/URL from the post, and NEVER invent links to news or external sites. The ONLY link allowed is the official URL of YOUR OWN product when you feature it; otherwise include no link at all. One emoji max (only if natural).
-- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : 'Mention a product ONLY if truly relevant, softly, at most one.'}
+- NEVER name or recommend any THIRD-PARTY product, app, brand, tool or company (no competitors, nothing you don't own — e.g. never NordPass, LastPass, Notion, etc.). The ONLY products you may mention are the user's own (in RULES). If none of them genuinely fit the post, write a useful or witty comment with NO product mention at all.
+- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : 'Mention a product ONLY if truly relevant, softly, at most one. Do not force it.'}
 - Output ONLY the comment text — no quotes, no preamble.`;
 
   const user = `Post by @${author || 'user'}:\n"""\n${(text || '').slice(0, 1500)}\n"""\n\nWrite one ${showcase ? 'short-portfolio ' : ''}comment.`;
@@ -112,7 +113,14 @@ function stripForeignLinks(text) {
     const d = String(domain).toLowerCase().replace(/^www\./, '');
     if (allow.some(a => d === a || d.endsWith('.' + a))) return m; // keep your own product links
     return ''; // drop foreign links / news domains
-  }).replace(/\(\s*\)/g, '').replace(/[ \t]{2,}/g, ' ').replace(/\s+([.,!?:;])/g, '$1').trim();
+  })
+    .replace(/\[([^\]]*)\]\(\s*\)/g, '$1')  // markdown [text]() -> text (url was stripped)
+    .replace(/\(\s*\[\s*\]\s*\)/g, '')      // ([]) leftover
+    .replace(/\[\s*\]/g, '')                // []
+    .replace(/\(\s*\)/g, '')                // ()
+    .replace(/\s+([.,!?:;])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
 }
 
 async function generate(s, messages, maxChars) {
