@@ -61,7 +61,7 @@
     if (!entry || !entry.id) return;
     chrome.storage.local.get('tcaHistory', (o) => {
       let h = (o.tcaHistory || []).filter(x => x.id !== entry.id);
-      h.unshift({ id: entry.id, author: entry.author || '', text: entry.text || '', ts: Date.now() });
+      h.unshift({ id: entry.id, author: entry.author || '', text: entry.text || '', ts: Date.now(), cost: +entry.cost || 0 });
       chrome.storage.local.set({ tcaHistory: h.slice(0, 200) });
     });
   }
@@ -253,6 +253,7 @@
       return;
     }
     const onPage = !!(target && target.el);
+    if (target) target.lastCost = resp.cost; // remember for the history record
     const regenerate = () => { body.innerHTML = L('<div class="tca-status">⏳ Пишу комментарий…</div>'); sendDraft(target.text, target.author, (r) => renderCard(r)); };
     body.appendChild(makeToneRow((k) => { if (target) target.tone = k; regenerate(); }));
     const ta = document.createElement('textarea'); ta.className = 'tca-text'; ta.rows = 4; ta.value = resp.draft; body.appendChild(ta);
@@ -271,7 +272,9 @@
     // Tiny build/tone stamp from the WORKER — if this tone is wrong or the version is old, reload the EXTENSION.
     const toneMap = { humor: L('С юмором'), mentor: L('Менторски'), neutral: L('Авто'), auto: L('Авто') };
     const tag = document.createElement('div'); tag.className = 'tca-build';
-    tag.textContent = '✓ ' + (toneMap[resp.tone] || resp.tone || '—') + (resp.build ? '  ·  v' + resp.build : '  ·  ' + L('старая сборка — перезагрузите расширение'));
+    tag.textContent = '✓ ' + (toneMap[resp.tone] || resp.tone || '—')
+      + (resp.build ? '  ·  v' + resp.build : '  ·  ' + L('старая сборка — перезагрузите расширение'))
+      + (resp.cost != null ? '  ·  ' + fmtCost(resp.cost) : '');
     body.appendChild(tag);
   }
 
@@ -279,7 +282,7 @@
     const orig = btn ? btn.innerHTML : '';
     if (btn) btn.textContent = '⏳…';
     const r = await insertReply(target && target.el, text);
-    if (target) { markCommented(target.id); recordHistory({ id: target.id, author: target.author, text }); }
+    if (target) { markCommented(target.id); recordHistory({ id: target.id, author: target.author, text, cost: target.lastCost }); }
     if (btn) { btn.textContent = r.method === 'inserted' ? L('✓ Вставлено') : L('📋 Cmd+V'); setTimeout(() => (btn.innerHTML = orig), 2600); }
     toast(r.method === 'inserted' ? L('Готово. Проверьте и нажмите «Опублікувати» в Threads.') : L('Скопировано в буфер. Откройте ответ и вставьте (Cmd/Ctrl+V).'));
   }
@@ -488,11 +491,24 @@
     return Math.floor(h / 24) + L(' дн');
   }
   // "🕘 История" tab — what you already wrote (so you don't write twice).
+  // Money/tokens formatting (costs are tiny - keep them readable).
+  function fmtCost(c) { c = +c || 0; return c > 0 ? '$' + Number(c.toPrecision(2)) : '$0'; }
+  function fmtTok(n) { n = +n || 0; return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n); }
+
   function renderHistory(list) {
     list.innerHTML = L('<div class="tca-sb-empty">Загрузка…</div>');
-    chrome.storage.local.get('tcaHistory', (o) => {
+    chrome.storage.local.get(['tcaHistory', 'tcaUsage'], (o) => {
       const items = (o.tcaHistory || []).slice(0, 60);
+      const u = o.tcaUsage || { cost: 0, tokens: 0, calls: 0 };
       list.innerHTML = '';
+      // Actual spend on the AI (real OpenRouter cost), always shown at the top.
+      const spend = document.createElement('div'); spend.className = 'tca-spend';
+      const lead = document.createElement('span'); lead.className = 'tca-spend-lead';
+      lead.innerHTML = '<b>' + fmtCost(u.cost) + '</b> · ' + (u.calls || 0) + ' ' + L('запросов') + ' · ' + fmtTok(u.tokens) + ' ' + L('токенов');
+      const rst = document.createElement('button'); rst.className = 'tca-spend-rst'; rst.textContent = L('сбросить');
+      rst.title = L('Обнулить счётчик затрат');
+      rst.onclick = () => chrome.storage.local.set({ tcaUsage: { cost: 0, tokens: 0, calls: 0, since: Date.now() } }, () => renderHistory(list));
+      spend.append(lead, rst); list.appendChild(spend);
       if (!items.length) {
         const e = document.createElement('div'); e.className = 'tca-sb-empty';
         e.textContent = L('Пока пусто. Здесь будут комментарии, которые вы уже написали.');
@@ -510,7 +526,7 @@
     const it = document.createElement('div'); it.className = 'tca-it';
     const meta = document.createElement('div'); meta.className = 'tca-it-meta';
     const au = document.createElement('span'); au.className = 'tca-it-author'; au.textContent = '@' + (p.author || '—');
-    const tm = document.createElement('span'); tm.className = 'tca-it-time'; tm.textContent = relTime(p.ts);
+    const tm = document.createElement('span'); tm.className = 'tca-it-time'; tm.textContent = relTime(p.ts) + (p.cost ? ' · ' + fmtCost(p.cost) : '');
     meta.append(au, tm); it.appendChild(meta);
     const sn = document.createElement('div'); sn.className = 'tca-it-sn'; sn.textContent = (p.text || '').slice(0, 220); it.appendChild(sn);
     const row = document.createElement('div'); row.className = 'tca-it-row';

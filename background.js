@@ -3,10 +3,23 @@ importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, 
 importScripts('i18n.js'); // provides L() for localized notifications/errors
 try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
-const TCA_BUILD = '1.1.1'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
+const TCA_BUILD = '1.1.2'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
 
 function getSettings() {
   return new Promise(res => chrome.storage.sync.get(TCA_DEFAULTS, res));
+}
+
+// Accumulate REAL spend (OpenRouter returns usage.cost in USD). Serialized to avoid lost updates.
+let usageChain = Promise.resolve();
+function addUsage(cost, tokens) {
+  usageChain = usageChain.then(() => new Promise(res => {
+    chrome.storage.local.get('tcaUsage', o => {
+      const u = o.tcaUsage || { cost: 0, tokens: 0, calls: 0, since: Date.now() };
+      u.cost += (+cost || 0); u.tokens += (+tokens || 0); u.calls += 1;
+      chrome.storage.local.set({ tcaUsage: u }, res);
+    });
+  }));
+  return usageChain;
 }
 
 function samplesBlock(samples) {
@@ -61,7 +74,7 @@ HARD CONSTRAINTS:
 - Describe any product ACCURATELY (see RULES) — never invent vague positioning.
 - No hashtags, no @mentions. NEVER copy or cite any link/URL from the post, and NEVER invent links to news or external sites. The ONLY link allowed is the official URL of YOUR OWN product when you feature it; otherwise include no link at all. One emoji max (only if natural).
 - NEVER name or recommend any THIRD-PARTY product, app, brand, tool or company (no competitors, nothing you don't own — e.g. never NordPass, LastPass, Notion, etc.). The ONLY products you may mention are the user's own (in RULES). If none of them genuinely fit the post, write a useful or witty comment with NO product mention at all.
-- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : playful ? 'Do NOT mention any product - this is a joke/banter post; just be funny and human.' : 'Mention a product ONLY if truly relevant, softly, at most one. Do not force it.'}
+- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : (playful || effTone === 'humor') ? 'Do NOT mention, pitch or name any product - this is a funny/banter reply; just be witty and human.' : 'Mention a product ONLY if truly relevant, softly, at most one. Do not force it.'}
 - Output ONLY the comment text — no quotes, no preamble.`;
 
   const user = `Post by @${author || 'user'}:\n"""\n${(text || '').slice(0, 1500)}\n"""\n\nWrite one ${showcase ? 'short-portfolio ' : ''}comment.`;
@@ -143,18 +156,22 @@ async function generate(s, messages, maxChars) {
       max_tokens: 2000,
       temperature: 0.85,
       reasoning: { effort: 'low', exclude: true }, // harmless on non-reasoning models; caps thinking on ones that force it
+      usage: { include: true }, // ask OpenRouter to report real cost (USD) + token totals
       messages
     })
   });
   const j = await r.json();
   if (!r.ok || j.error) return { ok: false, error: (j.error && j.error.message) || ('HTTP ' + r.status) };
+  const cost = (j.usage && +j.usage.cost) || 0;
+  const tokens = (j.usage && +j.usage.total_tokens) || 0;
+  if (cost || tokens) addUsage(cost, tokens); // record actual spend (fire-and-forget, serialized)
   let out = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
   out = String(out).trim().replace(/^["'«»“”\s]+|["'«»“”\s]+$/g, '').replace(/\s*[—–]\s*/g, ' - ');
   out = stripForeignLinks(out);
   const lim = maxChars || 480;
   if ([...out].length > lim) out = [...out].slice(0, lim - 1).join('') + '…';
-  if (!out) return { ok: false, error: L('Пустой ответ модели.') };
-  return { ok: true, draft: out, build: TCA_BUILD, tone: (s.__effTone || '') };
+  if (!out) return { ok: false, error: L('Пустой ответ модели.'), cost, tokens, build: TCA_BUILD };
+  return { ok: true, draft: out, build: TCA_BUILD, tone: (s.__effTone || ''), cost, tokens };
 }
 
 const NO_KEY = { ok: false, error: L('Не задан ключ OpenRouter. Откройте настройки расширения (⚙).') };
