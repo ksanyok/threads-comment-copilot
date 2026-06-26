@@ -10,6 +10,15 @@
 (() => {
   'use strict';
 
+  // If a previous (now-dead) injection left widgets in the DOM (e.g. the extension
+  // was reloaded without refreshing the page), remove them and reset decorations so
+  // this fresh script owns a single, live UI.
+  ['#tca-fab', '#tca-sidebar', '#tca-card', '#tca-note', '#tca-toast'].forEach(s => document.querySelectorAll(s).forEach(n => n.remove()));
+  document.querySelectorAll('[data-tca-ui]').forEach(el => {
+    el.removeAttribute('data-tca-ui');
+    el.querySelectorAll(':scope > .tca-dot, :scope > .tca-chip, :scope > .tca-btn, :scope > .tca-done-mark').forEach(n => n.remove());
+  });
+
   const REL = (typeof tcaRelevance === 'function') ? tcaRelevance : () => ({ score: 0, topics: [], top: '', lead: false });
   const KIND = (typeof tcaNotifKind === 'function') ? tcaNotifKind : () => 'post';
   let PRODUCTS = (typeof TCA_PRODUCTS !== 'undefined' && TCA_PRODUCTS.length) ? TCA_PRODUCTS : [];

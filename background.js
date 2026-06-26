@@ -208,6 +208,21 @@ chrome.alarms.onAlarm.addListener(a => { if (a.name === 'tcaPoll') poll(false); 
 chrome.notifications.onClicked.addListener(() => { if (lastPollUrl) chrome.tabs.create({ url: lastPollUrl, active: true }); });
 setupAlarm(); // also arm on worker (re)start
 
+// On install/update/reload, re-inject the widget into already-open Threads tabs.
+// (Content scripts aren't auto-re-injected, so the old in-page UI would go dead and
+// its buttons would stop responding until a manual page refresh.)
+chrome.runtime.onInstalled.addListener(() => {
+  try {
+    chrome.tabs.query({ url: ['https://www.threads.com/*', 'https://www.threads.net/*'] }, (tabs) => {
+      for (const t of tabs || []) {
+        if (!t.id) continue;
+        chrome.scripting.insertCSS({ target: { tabId: t.id }, files: ['content.css'] }).catch(() => {});
+        chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['i18n.js', 'defaults.js', 'content.js'] }).catch(() => {});
+      }
+    });
+  } catch (e) {}
+});
+
 // Toolbar badge = number of pending lead ("hot") posts found in the background.
 async function refreshBadge() {
   try {
