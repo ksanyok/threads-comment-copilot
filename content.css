@@ -79,6 +79,7 @@
 .tca-status{ color:#8b8b92; font-size:13px; }
 .tca-status.err{ color:#f87171; }
 .tca-hint{ color:#6b6b72; font-size:11px; margin-top:7px; }
+.tca-build{ color:#4b4b52; font-size:10px; margin-top:5px; letter-spacing:.2px; opacity:.85; }
 
 /* ---- floating launcher ---- */
 #tca-fab{

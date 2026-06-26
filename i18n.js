@@ -36,6 +36,7 @@ var TCA_MSG = {
   'Текст ляжет в окно ответа Threads. «Опублікувати» — вы сами.': { en: 'The text goes into the Threads reply box. You press “Post”.', uk: 'Текст ляже у вікно відповіді Threads. «Опублікувати» — ви самі.' },
   'Это пост из фонового поиска. Откройте его и вставьте черновик.': { en: 'This post is from the background search. Open it and paste the draft.', uk: 'Це пост із фонового пошуку. Відкрийте його та вставте чернетку.' },
   'Выберите тон и нажмите «Сформировать».': { en: 'Pick a tone and press “Draft”.', uk: 'Оберіть тон і натисніть «Сформувати».' },
+  'старая сборка — перезагрузите расширение': { en: 'old build - reload the extension', uk: 'стара збірка - перезавантажте розширення' },
   'Готово. Проверьте и нажмите «Опублікувати» в Threads.': { en: 'Done. Review and press “Post” in Threads.', uk: 'Готово. Перевірте та натисніть «Опублікувати» у Threads.' },
   'Скопировано в буфер. Откройте ответ и вставьте (Cmd/Ctrl+V).': { en: 'Copied to clipboard. Open the reply and paste (Cmd/Ctrl+V).', uk: 'Скопійовано в буфер. Відкрийте відповідь і вставте (Cmd/Ctrl+V).' },
   'Черновик скопирован. Откройте пост и вставьте (Cmd/Ctrl+V).': { en: 'Draft copied. Open the post and paste (Cmd/Ctrl+V).', uk: 'Чернетку скопійовано. Відкрийте пост і вставте (Cmd/Ctrl+V).' },

@@ -3,6 +3,7 @@ importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, 
 importScripts('i18n.js'); // provides L() for localized notifications/errors
 try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
+const TCA_BUILD = '1.1.1'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
 
 function getSettings() {
   return new Promise(res => chrome.storage.sync.get(TCA_DEFAULTS, res));
@@ -33,6 +34,7 @@ function buildMessages(s, text, author, product, tone, samples) {
     if (pref === 'humor' || pref === 'mentor' || pref === 'neutral') effTone = pref;
     else if (playful) effTone = 'humor'; // auto + a clearly playful/joke post
   }
+  s.__effTone = effTone || (playful ? 'humor' : 'auto'); // surfaced back to the card so you can see what tone actually fired
   const toneBlock = effTone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides everything in RULES): be GENUINELY, punchily FUNNY — a sharp one-liner, absurd exaggeration, or an unexpected twist with a REAL punchline, like the funniest person in the comments. Be bold and cheeky, riff on a specific detail of the post. When replying in Ukrainian/Russian, do not be shy to open or spice a punchline with a playful colloquial exclamation (e.g. "йосип босий", "йобушки-воробушки", "ото халепа", "матінко рідна", "ну ти диви", "тю", "от халепа") when it fits the joke - keep them mild, never actually vulgar or offensive, and not in every single comment. BANNED: hedging ("можливо... або може"), bland observations, mini-essays, any product mention. On a genuine question you may still drop one concrete useful tip, but wrapped in a joke. The reply MUST make a reader actually smile or laugh.\n'
     : effTone === 'mentor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): write as a calm, experienced mentor — serious, structured, concrete step-by-step advice. No jokes, no sarcasm, no small talk.\n'
     : effTone === 'neutral' ? '\nTONE: friendly and natural — a normal human reply, neither joke-heavy nor a lecture.\n'
@@ -152,7 +154,7 @@ async function generate(s, messages, maxChars) {
   const lim = maxChars || 480;
   if ([...out].length > lim) out = [...out].slice(0, lim - 1).join('') + '…';
   if (!out) return { ok: false, error: L('Пустой ответ модели.') };
-  return { ok: true, draft: out };
+  return { ok: true, draft: out, build: TCA_BUILD, tone: (s.__effTone || '') };
 }
 
 const NO_KEY = { ok: false, error: L('Не задан ключ OpenRouter. Откройте настройки расширения (⚙).') };

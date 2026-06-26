@@ -268,6 +268,11 @@
     const hint = document.createElement('div'); hint.className = 'tca-hint';
     hint.textContent = onPage ? L('Текст ляжет в окно ответа Threads. «Опублікувати» — вы сами.') : L('Это пост из фонового поиска. Откройте его и вставьте черновик.');
     body.appendChild(hint);
+    // Tiny build/tone stamp from the WORKER — if this tone is wrong or the version is old, reload the EXTENSION.
+    const toneMap = { humor: L('С юмором'), mentor: L('Менторски'), neutral: L('Авто'), auto: L('Авто') };
+    const tag = document.createElement('div'); tag.className = 'tca-build';
+    tag.textContent = '✓ ' + (toneMap[resp.tone] || resp.tone || '—') + (resp.build ? '  ·  v' + resp.build : '  ·  ' + L('старая сборка — перезагрузите расширение'));
+    body.appendChild(tag);
   }
 
   async function doInsert(text, btn) {
