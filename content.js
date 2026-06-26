@@ -666,7 +666,11 @@
     const cardOpen = cardEl && cardEl.classList.contains('open');
     if (fresh > 0 && !firstScan && !sidebarOpen && !cardOpen) { pendingNew += fresh; pulseFab(); showNote(pendingNew); }
     firstScan = false;
-    if (sidebarOpen) { const l = document.querySelector('#tca-sidebar .tca-sb-list'); if (l) renderList(l); }
+    // Only the live on-page lists refresh on scan. Don't re-render Post/Found/History/
+    // Product — that would wipe async content (e.g. topics loading) into a detached node.
+    if (sidebarOpen && (sidebarMode === 'rel' || sidebarMode === 'all')) {
+      const l = document.querySelector('#tca-sidebar .tca-sb-list'); if (l) renderList(l);
+    }
   }
   let t = null;
   new MutationObserver(() => { clearTimeout(t); t = setTimeout(scan, 600); })
