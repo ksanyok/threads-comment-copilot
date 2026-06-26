@@ -200,8 +200,23 @@
   function card() { if (!cardEl) { cardEl = document.createElement('div'); cardEl.id = 'tca-card'; document.body.appendChild(cardEl); } return cardEl; }
   function closeCard() { if (cardEl) cardEl.classList.remove('open'); }
 
-  function startComment(t, autoInsert) {
+  function makeToneRow(onPick) {
+    const row = document.createElement('div'); row.className = 'tca-tone';
+    [['auto', L('Авто')], ['humor', L('С юмором')], ['mentor', L('Менторски')]].forEach(([k, lbl]) => {
+      const b = document.createElement('button'); b.type = 'button';
+      b.className = 'tca-tone-b' + (((target && target.tone) || 'auto') === k ? ' on' : '');
+      b.textContent = lbl;
+      b.onclick = () => onPick(k);
+      row.appendChild(b);
+    });
+    return row;
+  }
+
+  // Click ✍️ -> open the card in a CHOOSE state: pick a tone, then press Сформировать.
+  // Nothing is generated or inserted until the user asks.
+  function startComment(t) {
     target = t;
+    if (!target.tone) target.tone = 'auto';
     hideNote();
     const c = card(); c.classList.add('open'); c.innerHTML = '';
     c.style.right = sidebarOpen ? '392px' : '18px'; // sit beside the sidebar, not on top of it
@@ -210,28 +225,36 @@
     const ht = document.createElement('span'); ht.textContent = L('Комментарий для @') + (t.author || '—'); h.appendChild(ht);
     const x = document.createElement('button'); x.className = 'tca-card-x'; x.innerHTML = ic('close', 18); x.onclick = closeCard;
     head.append(h, x); c.appendChild(head);
-    const body = document.createElement('div'); body.className = 'tca-card-body';
-    body.innerHTML = L('<div class="tca-status">⏳ Пишу комментарий…</div>');
-    c.appendChild(body);
-    sendDraft(t.text, t.author, (resp) => renderCard(resp, autoInsert !== false));
+    const body = document.createElement('div'); body.className = 'tca-card-body'; c.appendChild(body);
+    renderChoose(body);
   }
 
-  function renderCard(resp, autoInsert) {
+  function renderChoose(body) {
+    body.innerHTML = '';
+    if (target && target.text) { const snip = document.createElement('div'); snip.className = 'tca-card-snip'; snip.textContent = target.text.replace(/\s+/g, ' ').slice(0, 150); body.appendChild(snip); }
+    body.appendChild(makeToneRow((k) => { if (target) target.tone = k; renderChoose(body); }));
+    const gen = mkBtn(L('Сформировать комментарий'), () => {
+      body.innerHTML = L('<div class="tca-status">⏳ Пишу комментарий…</div>');
+      sendDraft(target.text, target.author, (r) => renderCard(r));
+    }, 'pencil');
+    gen.classList.add('tca-gen-main');
+    body.appendChild(gen);
+    const hint = document.createElement('div'); hint.className = 'tca-hint'; hint.textContent = L('Выберите тон и нажмите «Сформировать».'); body.appendChild(hint);
+  }
+
+  function renderCard(resp) {
     const body = card().querySelector('.tca-card-body'); if (!body) return;
     body.innerHTML = '';
     if (!resp || !resp.ok) {
       const e = document.createElement('div'); e.className = 'tca-status err';
       e.textContent = (resp && /ключ|key|openrouter/i.test(resp.error || '')) ? L('⚠️ Нет ключа OpenRouter — откройте ⚙ настройки.') : '⚠️ ' + ((resp && resp.error) || L('нет ответа'));
-      body.appendChild(e); return;
+      body.appendChild(e);
+      body.appendChild(makeToneRow((k) => { if (target) target.tone = k; renderChoose(body); }));
+      return;
     }
     const onPage = !!(target && target.el);
-    const toneRow = document.createElement('div'); toneRow.className = 'tca-tone';
-    [['auto', L('Авто')], ['humor', L('С юмором')], ['mentor', L('Менторски')]].forEach(([k, lbl]) => {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'tca-tone-b' + (((target && target.tone) || 'auto') === k ? ' on' : ''); b.textContent = lbl;
-      b.onclick = () => { if (target) target.tone = k; body.innerHTML = '<div class="tca-status">⏳…</div>'; sendDraft(target.text, target.author, (r) => renderCard(r, false)); };
-      toneRow.appendChild(b);
-    });
-    body.appendChild(toneRow);
+    const regenerate = () => { body.innerHTML = L('<div class="tca-status">⏳ Пишу комментарий…</div>'); sendDraft(target.text, target.author, (r) => renderCard(r)); };
+    body.appendChild(makeToneRow((k) => { if (target) target.tone = k; regenerate(); }));
     const ta = document.createElement('textarea'); ta.className = 'tca-text'; ta.rows = 4; ta.value = resp.draft; body.appendChild(ta);
     const row = document.createElement('div'); row.className = 'tca-row';
     const cnt = document.createElement('span'); cnt.className = 'tca-count';
@@ -239,13 +262,12 @@
     const main = onPage
       ? mkBtn(L('Вставить в ответ'), () => doInsert(ta.value, main), 'send')
       : mkBtn(L('Открыть пост'), () => { navigator.clipboard.writeText(ta.value).catch(() => {}); window.open((target && target.url) || 'https://www.threads.com/', '_blank'); toast(L('Черновик скопирован. Откройте пост и вставьте (Cmd/Ctrl+V).')); }, 'open');
-    const regen = mkBtn(L('Ещё'), () => { body.innerHTML = '<div class="tca-status">⏳…</div>'; sendDraft(target.text, target.author, (r) => renderCard(r, false)); }, 'refresh');
+    const regen = mkBtn(L('Ещё'), regenerate, 'refresh');
     const copy = mkBtn('', () => copyText(ta.value, copy), 'copy');
     row.append(cnt, spacer(), main, regen, copy); body.appendChild(row);
     const hint = document.createElement('div'); hint.className = 'tca-hint';
     hint.textContent = onPage ? L('Текст ляжет в окно ответа Threads. «Опублікувати» — вы сами.') : L('Это пост из фонового поиска. Откройте его и вставьте черновик.');
     body.appendChild(hint);
-    if (autoInsert && onPage) doInsert(ta.value, main);
   }
 
   async function doInsert(text, btn) {
