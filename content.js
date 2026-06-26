@@ -103,6 +103,25 @@
     return { el, id: postId(el), author: postAuthor(el), url: postUrl(el), text, score: rel.score, top: rel.top, lead: rel.lead };
   }
 
+  // On the Activity page Threads marks the TYPE with icons, not words. A real
+  // reply/post has an engagement bar (repost/share); a like/follow notification
+  // does not — so keep items with an engagement bar, skip the rest.
+  const ENGAGE = /репост|repost|поділит|поделит|share|поширит/i;
+  const REPLIED = /вже відповіл|уже ответил|already replied/i;
+  function activitySignals(el) {
+    let node = el, engaged = false, replied = false;
+    for (let i = 0; i < 5 && node && node !== document.body; i++) {
+      for (const s of node.querySelectorAll('svg[aria-label]')) {
+        const al = s.getAttribute('aria-label') || '';
+        if (ENGAGE.test(al)) engaged = true;
+        if (REPLIED.test(al)) replied = true;
+      }
+      if ((node.innerText || '').length > 3500) break;
+      node = node.parentElement;
+    }
+    return { engaged, replied };
+  }
+
   function collect() {
     const onActivity = /\/activity/i.test(location.pathname);
     const m = new Map();
@@ -112,6 +131,13 @@
       const text0 = postText(el);
       // follows / likes / reposts -> nothing to reply to (RU + UA wording)
       if (KIND(text0) === 'social') { stripUi(el); el.dataset.tcaUi = 'skip'; continue; }
+      // Activity page: keep only items with an engagement bar (a real reply/post you can
+      // answer); likes/follows have no bar. Mark already-answered ones as done.
+      if (onActivity) {
+        const sig = activitySignals(el);
+        if (!sig.engaged) { stripUi(el); el.dataset.tcaUi = 'skip'; continue; }
+        if (sig.replied) markCommented(postId(el));
+      }
       // exclude MY OWN threads in feeds — but NOT on the Activity page, where replies to my
       // posts (which link to my own permalink) are exactly what I want to answer.
       if (!onActivity && MINE && (author === MINE || urlHandle === MINE)) { el.dataset.tcaMine = '1'; captureSample(text0); continue; }
