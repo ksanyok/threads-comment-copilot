@@ -9,6 +9,7 @@ var TCA_DEFAULTS = {
   myHandle: '',
   pollEnabled: true,
   pollMinutes: 15,
+  tonePref: 'auto',
   voice: `You are a thoughtful, friendly person commenting on Threads in your own authentic voice. You write like a real human - concise and specific, sharing genuine value, experience or a sincere question. First person, a little personality, never robotic or salesy.`,
   guidelines: `LANGUAGE: reply in the SAME language as the post.
 
@@ -69,6 +70,18 @@ function tcaShowcase(text) {
   return TCA_SHOWCASE.some(s => t.includes(s));
 }
 
+// Playful / joke / meme / banter post -> reply with humor, no product pitch.
+var TCA_PLAYFUL = ['ахах','хаха','ахаа','хех','хих','лол',' lol','рофл','ору ','жарт','жартую','смішно','смешно','прикол','мем ',' meme','гумор','сарказм',')))',':)',':d'];
+function tcaIsPlayful(text) {
+  const s = String(text || '');
+  const t = ' ' + s.toLowerCase() + ' ';
+  let hits = 0;
+  for (const k of TCA_PLAYFUL) if (t.includes(k)) hits++;
+  let emoji = 0;
+  try { emoji = (s.match(/\p{Extended_Pictographic}/gu) || []).length; } catch (e) {}
+  return hits >= 1 || emoji >= 3;
+}
+
 // Products — used by the "🎯 Под продукт" tab (find posts to write about a specific
 // product) and to focus the generated comment on that product. `match` = keywords
 // that mean "this post is a fit for the product"; `desc` = how to describe it.
@@ -103,4 +116,5 @@ if (typeof self !== 'undefined') {
   self.tcaNotifKind = tcaNotifKind;
   self.tcaShowcase = tcaShowcase;
   self.tcaProductMatch = tcaProductMatch;
+  self.tcaIsPlayful = tcaIsPlayful;
 }

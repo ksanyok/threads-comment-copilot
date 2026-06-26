@@ -26,9 +26,18 @@ function buildMessages(s, text, author, product, tone, samples) {
   const focusBlock = (product && product.name)
     ? `\nFOCUS PRODUCT: the user picked this post specifically to write about ${product.name}. Feature ${product.name} (${product.desc}).${product.url ? ' You may add its link once: ' + product.url + '.' : ''} Introduce it naturally and value-first, describe it accurately, no hard sell. Do not mention other products.\n`
     : '';
-  const toneBlock = tone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): make this genuinely witty with real sarcasm — a sharp, playful one-liner that riffs on THIS post. If the post is a joke or meme, match it with a clever sarcastic quip and do NOT explain anything or recommend any product. A funny reply beats a helpful one here. Still kind, never offensive, never a sales pitch.\n'
-    : tone === 'mentor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): write as a calm, experienced mentor — serious, structured, concrete step-by-step advice from experience. No jokes, no sarcasm, no small talk.\n'
+  const playful = !product && (typeof tcaIsPlayful === 'function') && tcaIsPlayful(text);
+  const pref = ((s.tonePref || 'auto') + '').toLowerCase();
+  let effTone = (tone === 'humor' || tone === 'mentor' || tone === 'neutral') ? tone : '';
+  if (!effTone) {
+    if (pref === 'humor' || pref === 'mentor' || pref === 'neutral') effTone = pref;
+    else if (playful) effTone = 'humor'; // auto + a clearly playful/joke post
+  }
+  const toneBlock = effTone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): be witty and a bit sarcastic. On a joke / meme / banter post, match it with a sharp, playful one-liner and do NOT explain or pitch anything. On a genuine question still give a useful answer, but keep it light, human and a little cheeky - not a lecture, not a sales pitch.\n'
+    : effTone === 'mentor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): write as a calm, experienced mentor — serious, structured, concrete step-by-step advice. No jokes, no sarcasm, no small talk.\n'
+    : effTone === 'neutral' ? '\nTONE: friendly and natural — a normal human reply, neither joke-heavy nor a lecture.\n'
     : '';
+  const playfulBlock = playful ? '\nThis post is a JOKE / banter — do NOT mention or pitch any product; just be genuinely funny and human.\n' : '';
 
   const system =
 `You write short comments (replies) on Threads in the user's brand voice.
@@ -39,7 +48,7 @@ ${s.voice}
 
 RULES:
 ${s.guidelines}
-${samplesBlock(samples)}${toneBlock}${showcaseBlock}${focusBlock}
+${samplesBlock(samples)}${toneBlock}${playfulBlock}${showcaseBlock}${focusBlock}
 HARD CONSTRAINTS:
 - ${lang}
 - Write in FIRST PERSON SINGULAR ("я", "мій"). NEVER "we/our" ("ми/наш").
@@ -50,7 +59,7 @@ HARD CONSTRAINTS:
 - Describe any product ACCURATELY (see RULES) — never invent vague positioning.
 - No hashtags, no @mentions. NEVER copy or cite any link/URL from the post, and NEVER invent links to news or external sites. The ONLY link allowed is the official URL of YOUR OWN product when you feature it; otherwise include no link at all. One emoji max (only if natural).
 - NEVER name or recommend any THIRD-PARTY product, app, brand, tool or company (no competitors, nothing you don't own — e.g. never NordPass, LastPass, Notion, etc.). The ONLY products you may mention are the user's own (in RULES). If none of them genuinely fit the post, write a useful or witty comment with NO product mention at all.
-- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : 'Mention a product ONLY if truly relevant, softly, at most one. Do not force it.'}
+- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : playful ? 'Do NOT mention any product - this is a joke/banter post; just be funny and human.' : 'Mention a product ONLY if truly relevant, softly, at most one. Do not force it.'}
 - Output ONLY the comment text — no quotes, no preamble.`;
 
   const user = `Post by @${author || 'user'}:\n"""\n${(text || '').slice(0, 1500)}\n"""\n\nWrite one ${showcase ? 'short-portfolio ' : ''}comment.`;

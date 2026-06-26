@@ -170,7 +170,12 @@ var TCA_MSG = {
   'Авто-поиск: искать новые тематические посты в фоне и слать уведомления': { en: 'Auto-search: find new matching posts in the background and notify', uk: 'Авто-пошук: шукати нові тематичні пости у фоні та надсилати сповіщення' },
   'Раз в N минут открывает скрытую вкладку поиска Threads по вашим темам, ищет новые ветки и уведомляет. Ничего не публикует.': { en: 'Every N minutes it opens a hidden Threads search tab for your topics, finds new threads and notifies you. It never publishes anything.', uk: 'Раз на N хвилин відкриває приховану вкладку пошуку Threads за вашими темами, шукає нові гілки та сповіщає. Нічого не публікує.' },
   'Интервал авто-поиска, минут': { en: 'Auto-search interval, minutes', uk: 'Інтервал авто-пошуку, хвилин' },
-  'Сохранить': { en: 'Save', uk: 'Зберегти' }
+  'Сохранить': { en: 'Save', uk: 'Зберегти' },
+  'Тон по умолчанию': { en: 'Default tone', uk: 'Тон за замовчуванням' },
+  'Авто (умный — на шутки шутка, на вопрос польза)': { en: 'Auto (smart — joke for jokes, value for questions)', uk: 'Авто (розумний — на жарт жарт, на питання користь)' },
+  'Юмор в приоритете': { en: 'Humor first', uk: 'Гумор у пріоритеті' },
+  'Нейтрально': { en: 'Neutral', uk: 'Нейтрально' },
+  'В карточке комментария тон можно переопределить под каждый ответ.': { en: 'You can override the tone per comment in the composer card.', uk: 'У картці коментаря тон можна перевизначити для кожної відповіді.' }
 };
 
 function L(s) {

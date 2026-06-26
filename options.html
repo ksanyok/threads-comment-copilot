@@ -57,6 +57,15 @@
   <label data-i18n>Язык комментариев</label>
   <input id="language" type="text" data-i18n-ph placeholder="auto — как в посте">
 
+  <label data-i18n>Тон по умолчанию</label>
+  <select id="tonePref">
+    <option value="auto" data-i18n>Авто (умный — на шутки шутка, на вопрос польза)</option>
+    <option value="humor" data-i18n>Юмор в приоритете</option>
+    <option value="mentor" data-i18n>Менторски</option>
+    <option value="neutral" data-i18n>Нейтрально</option>
+  </select>
+  <div class="muted" data-i18n>В карточке комментария тон можно переопределить под каждый ответ.</div>
+
   <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:#555;margin-top:16px">
     <input id="pollEnabled" type="checkbox" style="width:auto;margin:0">
     <span data-i18n>Авто-поиск: искать новые тематические посты в фоне и слать уведомления</span>
