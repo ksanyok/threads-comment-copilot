@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Threads Comment Assistant",
+  "version": "1.1.0",
+  "description": "Пишет комментарии в вашем голосе к постам Threads. Вы проверяете и публикуете сами — ничего автоматически.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": [
+    "https://openrouter.ai/*",
+    "https://www.threads.com/*",
+    "https://www.threads.net/*"
+  ],
+  "icons": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.threads.com/*", "https://www.threads.net/*"],
+      "js": ["defaults.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Threads Comment — написать комментарий",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icon16.png", "48": "icon48.png", "128": "icon128.png" }
+  }
+}

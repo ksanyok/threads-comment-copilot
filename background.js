@@ -1,0 +1,268 @@
+// Service worker: drafts a comment via OpenRouter (called from the content script + popup).
+importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, guidelines)
+try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
+const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
+
+function getSettings() {
+  return new Promise(res => chrome.storage.sync.get(TCA_DEFAULTS, res));
+}
+
+function samplesBlock(samples) {
+  return (samples && samples.length)
+    ? '\nHOW I WRITE (real examples of MY posts/comments - match this voice and rhythm, do NOT copy the text):\n- ' + samples.map(x => String(x).replace(/\s+/g, ' ').slice(0, 200)).join('\n- ') + '\n'
+    : '';
+}
+
+function buildMessages(s, text, author, product, tone, samples) {
+  const lang = (s.language && s.language.toLowerCase() !== 'auto')
+    ? `Write the comment in this language: ${s.language}.`
+    : 'LANGUAGE: if the post is in English, reply in English; for ANY other language (including Russian or Ukrainian) reply in UKRAINIAN. Never reply in Russian.';
+
+  const showcase = !product && (typeof tcaShowcase === 'function') && tcaShowcase(text);
+  const showcaseBlock = showcase
+    ? '\nSHOWCASE POST: the author invites people to share what they build / asks to present projects. If you have configured your own products, reply with a SHORT portfolio (2-4 sentences): lead with your flagship, then briefly mention 1-2 other products that fit, described accurately. Otherwise, briefly introduce what you do and add value. This may mention more than one product.\n'
+    : '';
+  const focusBlock = (product && product.name)
+    ? `\nFOCUS PRODUCT: the user picked this post specifically to write about ${product.name}. Feature ${product.name} (${product.desc}).${product.url ? ' You may add its link once: ' + product.url + '.' : ''} Introduce it naturally and value-first, describe it accurately, no hard sell. Do not mention other products.\n`
+    : '';
+  const toneBlock = tone === 'humor' ? '\nTONE: short, witty, with light sarcasm - still kind, never offensive.\n'
+    : tone === 'mentor' ? '\nTONE: a calm mentor/advisor - concrete, structured, genuinely helpful, no jokes.\n'
+    : '';
+
+  const system =
+`You write short comments (replies) on Threads in the user's brand voice.
+You are a thoughtful human commenter, not a marketer.
+
+OUR VOICE / MANNER:
+${s.voice}
+
+RULES:
+${s.guidelines}
+${samplesBlock(samples)}${toneBlock}${showcaseBlock}${focusBlock}
+HARD CONSTRAINTS:
+- ${lang}
+- Write in FIRST PERSON SINGULAR ("я", "мій"). NEVER "we/our" ("ми/наш").
+- Use ONLY short hyphens "-". Never use long dashes "—" or "–".
+- Write a COMPLETE comment that ends on a finished thought. NEVER stop mid-sentence.
+- Length up to 480 characters. A normal comment is 1-3 sentences; a showcase portfolio is 2-4.
+- Must be relevant and add genuine value (insight, experience, or a sincere question).
+- Describe any product ACCURATELY (see RULES) — never invent vague positioning.
+- No hashtags, no @mentions. You MAY include ONE link — only the featured product's official URL — if it genuinely helps; never other links. One emoji max (only if natural).
+- ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : 'Mention a product ONLY if truly relevant, softly, at most one.'}
+- Output ONLY the comment text — no quotes, no preamble.`;
+
+  const user = `Post by @${author || 'user'}:\n"""\n${(text || '').slice(0, 1500)}\n"""\n\nWrite one ${showcase ? 'short-portfolio ' : ''}comment.`;
+  return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+
+// Build a prompt for an ORIGINAL post to the user's own feed (not a reply).
+function buildPostMessages(s, topic, samples) {
+  const system =
+`You write an original Threads POST for the user's OWN feed (not a reply), in their brand voice.
+
+VOICE / MANNER:
+${s.voice}
+
+PRODUCTS & RULES (for accurate mentions and link):
+${s.guidelines}
+${samplesBlock(samples)}
+HARD CONSTRAINTS:
+- Write in FIRST PERSON SINGULAR ("я", "мій"). Never "we/our".
+- Language: Ukrainian (unless the topic is clearly English).
+- Strong first-line hook, then real value from my experience. Engaging and human, not an ad.
+- Up to 500 characters. Use ONLY short hyphens "-", never long dashes.
+- You MAY softly mention ONE of my products (with its official link) if it fits the topic naturally; otherwise none.
+- A COMPLETE post, no cut-offs. Output ONLY the post text - no quotes, no preamble, no hashtags.`;
+  const user = `Topic for my post: ${topic}\nWrite one post.`;
+  return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+
+// Suggest fresh post-topic ideas in the user's language/niche (on demand).
+function buildTopicsMessages(s, samples) {
+  const system =
+`Suggest fresh topic ideas for the user's OWN Threads posts, in THEIR language (Ukrainian unless the samples are clearly another language) and niche.
+Base them on the user's voice, products and real expertise. Vary the angle: case study, contrarian opinion, practical tip, behind-the-scenes, mistake-and-lesson.
+
+VOICE:
+${s.voice}
+PRODUCTS:
+${s.guidelines}
+${samplesBlock(samples)}`;
+  const user = 'Give exactly 8 topic ideas. Each a short phrase (3-8 words). One per line. No numbering, no quotes, no extra text.';
+  return [{ role: 'system', content: system }, { role: 'user', content: user }];
+}
+
+function getSamples() {
+  return new Promise(res => chrome.storage.local.get('tcaSamples', o => res((o.tcaSamples || []).slice(0, 6))));
+}
+
+async function generate(s, messages, maxChars) {
+  const r = await fetch(OPENROUTER, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.orKey, 'X-Title': 'Threads Comment Assistant' },
+    body: JSON.stringify({
+      model: s.model || 'google/gemini-2.5-flash-lite',
+      max_tokens: 2000,
+      temperature: 0.85,
+      reasoning: { effort: 'low', exclude: true }, // harmless on non-reasoning models; caps thinking on ones that force it
+      messages
+    })
+  });
+  const j = await r.json();
+  if (!r.ok || j.error) return { ok: false, error: (j.error && j.error.message) || ('HTTP ' + r.status) };
+  let out = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+  out = String(out).trim().replace(/^["'«»“”\s]+|["'«»“”\s]+$/g, '').replace(/\s*[—–]\s*/g, ' - ');
+  const lim = maxChars || 480;
+  if ([...out].length > lim) out = [...out].slice(0, lim - 1).join('') + '…';
+  if (!out) return { ok: false, error: 'Пустой ответ модели.' };
+  return { ok: true, draft: out };
+}
+
+const NO_KEY = { ok: false, error: 'Не задан ключ OpenRouter. Откройте настройки расширения (⚙).' };
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.type === 'draft') {
+    (async () => {
+      const s = await getSettings();
+      if (!s.orKey) return sendResponse(NO_KEY);
+      const samples = await getSamples();
+      try { sendResponse(await generate(s, buildMessages(s, msg.text, msg.author, msg.product, msg.tone, samples), 480)); }
+      catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e) }); }
+    })();
+    return true;
+  }
+  if (msg && msg.type === 'draftPost') {
+    (async () => {
+      const s = await getSettings();
+      if (!s.orKey) return sendResponse(NO_KEY);
+      const samples = await getSamples();
+      try { sendResponse(await generate(s, buildPostMessages(s, msg.topic, samples), 500)); }
+      catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e) }); }
+    })();
+    return true;
+  }
+  if (msg && msg.type === 'suggestTopics') {
+    (async () => {
+      const s = await getSettings();
+      if (!s.orKey) return sendResponse(NO_KEY);
+      const samples = await getSamples();
+      try {
+        const r = await generate(s, buildTopicsMessages(s, samples), 700);
+        if (!r.ok) return sendResponse(r);
+        const topics = r.draft.split('\n').map(x => x.replace(/^[\s\-\d.)•*]+/, '').trim()).filter(x => x.length > 3).slice(0, 8);
+        sendResponse({ ok: true, topics: topics.length ? topics : (typeof TCA_POST_TOPICS !== 'undefined' ? TCA_POST_TOPICS.slice(0, 8) : []) });
+      } catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e) }); }
+    })();
+    return true;
+  }
+  if (msg && msg.type === 'pollNow') { poll(true).then(sendResponse); return true; }
+});
+
+// ---------- background topic search every N minutes ----------
+const SEEN_KEY = 'tcaSeen';
+const POLL_TOPICS = [
+  ['SEO', 'SEO просування сайту'],
+  ['WooCommerce', 'woocommerce магазин товари'],
+  ['Стартапы', 'стартап засновник продукт'],
+  ['WordPress', 'wordpress сайт'],
+  ['Дети', 'виховання дітей завдання винагорода'],
+  ['AI', 'штучний інтелект автоматизація'],
+  ['Приложения', 'мобільний застосунок додаток']
+];
+let polling = false, rotateIdx = 0, lastPollUrl = null;
+
+async function setupAlarm() {
+  const s = await getSettings();
+  await chrome.alarms.clear('tcaPoll');
+  if (s.pollEnabled !== false) {
+    const mins = Math.max(5, parseInt(s.pollMinutes, 10) || 15);
+    chrome.alarms.create('tcaPoll', { periodInMinutes: mins, delayInMinutes: 1 });
+  }
+}
+chrome.runtime.onInstalled.addListener(setupAlarm);
+if (chrome.runtime.onStartup) chrome.runtime.onStartup.addListener(setupAlarm);
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'sync' && (ch.pollEnabled || ch.pollMinutes)) setupAlarm();
+});
+chrome.alarms.onAlarm.addListener(a => { if (a.name === 'tcaPoll') poll(false); });
+chrome.notifications.onClicked.addListener(() => { if (lastPollUrl) chrome.tabs.create({ url: lastPollUrl, active: true }); });
+setupAlarm(); // also arm on worker (re)start
+
+// Toolbar badge = number of pending lead ("hot") posts found in the background.
+async function refreshBadge() {
+  try {
+    const o = await chrome.storage.local.get(['tcaFound', 'tcaCommented']);
+    const done = new Set(o.tcaCommented || []);
+    const n = (o.tcaFound || []).filter(p => p.lead && !done.has(p.id)).length;
+    chrome.action.setBadgeBackgroundColor({ color: '#f59e0b' });
+    chrome.action.setBadgeText({ text: n ? String(n) : '' });
+  } catch (e) {}
+}
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === 'local' && (ch.tcaFound || ch.tcaCommented)) refreshBadge();
+});
+refreshBadge();
+
+// Open a background tab, ask its content script for relevant posts, then close it.
+function collectFromTab(tabId, timeout) {
+  return new Promise(resolve => {
+    const start = Date.now();
+    const tick = () => {
+      chrome.tabs.sendMessage(tabId, { type: 'tcaCollect' }, (resp) => {
+        const err = chrome.runtime.lastError;
+        if (err || !resp) {
+          if (Date.now() - start > timeout) return resolve(null);
+          return setTimeout(tick, 1500);
+        }
+        if (resp.items && resp.items.length) return resolve(resp.items);
+        if (Date.now() - start > timeout) return resolve(resp.items || []);
+        setTimeout(tick, 1500);
+      });
+    };
+    setTimeout(tick, 3500); // give the SPA time to render search results
+  });
+}
+
+async function poll(manual) {
+  if (polling) return { ok: false, error: 'busy' };
+  const s = await getSettings();
+  if (!manual && s.pollEnabled === false) return { ok: false, error: 'disabled' };
+  polling = true;
+  let created = null;
+  try {
+    const [label, q] = POLL_TOPICS[rotateIdx % POLL_TOPICS.length]; rotateIdx++;
+    const url = 'https://www.threads.com/search?q=' + encodeURIComponent(q) + '&serp_type=default';
+    lastPollUrl = url;
+    created = await chrome.tabs.create({ url, active: false });
+    const items = await collectFromTab(created.id, 14000);
+    await chrome.tabs.remove(created.id).catch(() => {});
+    created = null;
+    if (!items || !items.length) return { ok: true, found: 0, label };
+    const store = await chrome.storage.local.get(SEEN_KEY);
+    const seen = new Set(store[SEEN_KEY] || []);
+    const fresh = items.filter(p => p.id && !seen.has(p.id));
+    fresh.forEach(p => seen.add(p.id));
+    await chrome.storage.local.set({ [SEEN_KEY]: [...seen].slice(-600) });
+    if (fresh.length) {
+      // keep the found posts so the widget can show them in a separate "Найдено" tab
+      const fStore = await chrome.storage.local.get('tcaFound');
+      const add = fresh.map(p => ({ id: p.id, author: p.author, text: p.text, url: p.url, top: p.top, lead: !!p.lead, label, ts: Date.now() }));
+      const merged = [...add, ...(fStore.tcaFound || [])].filter((p, i, a) => a.findIndex(q => q.id === p.id) === i).slice(0, 60);
+      await chrome.storage.local.set({ tcaFound: merged });
+      const top = fresh[0];
+      chrome.notifications.create('tcaPoll', {
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: `🧵 ${fresh.length} новых постов по теме: ${label}`,
+        message: (top.author ? '@' + top.author + ': ' : '') + (top.text || '').replace(/\s+/g, ' ').slice(0, 140),
+        priority: 1
+      });
+    }
+    return { ok: true, found: fresh.length, label };
+  } catch (e) {
+    if (created) chrome.tabs.remove(created.id).catch(() => {});
+    return { ok: false, error: String((e && e.message) || e) };
+  } finally {
+    polling = false;
+  }
+}
