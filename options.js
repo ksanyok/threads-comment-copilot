@@ -25,7 +25,7 @@ async function loadModels() {
       return (!out.length || out.includes('text')) && (!inp.length || inp.includes('text')) && m.pricing;
     });
     renderModels();
-  } catch (e) { tiles.textContent = 'Не удалось загрузить модели (' + (e.message || e) + '). Можно вписать id вручную в поиск и выбрать.'; }
+  } catch (e) { tiles.textContent = L('Не удалось загрузить модели (') + (e.message || e) + L('). Можно вписать id вручную в поиск и выбрать.'); }
 }
 function renderModels() {
   const tiles = document.getElementById('modelTiles');
@@ -40,11 +40,11 @@ function renderModels() {
     const sel = MODELS.find(m => m.id === selectedModel); if (sel) list.unshift(sel);
   }
   tiles.innerHTML = '';
-  if (!list.length) { tiles.textContent = 'Ничего не найдено.'; return; }
+  if (!list.length) { tiles.textContent = L('Ничего не найдено.'); return; }
   list.forEach(m => {
     const t = document.createElement('div'); t.className = 'tile' + (m.id === selectedModel ? ' on' : '');
     t.innerHTML = '<div class="nm">' + esc(m.name || m.id) + '</div><div class="id">' + esc(m.id) + '</div>' +
-      '<div class="pr">вход <b>' + price(m.pricing.prompt) + '</b> · выход <b>' + price(m.pricing.completion) + '</b></div>';
+      L('<div class="pr">вход <b>') + price(m.pricing.prompt) + L('</b> · выход <b>') + price(m.pricing.completion) + '</b></div>';
     t.onclick = () => { selectedModel = m.id; document.getElementById('model').value = m.id; renderModels(); };
     tiles.appendChild(t);
   });
@@ -71,7 +71,7 @@ document.getElementById('save').addEventListener('click', () => {
   }
   chrome.storage.sync.set(o, () => {
     const st = document.getElementById('status');
-    st.textContent = 'Сохранено ✓';
+    st.textContent = L('Сохранено ✓');
     setTimeout(() => (st.textContent = ''), 2000);
   });
 });
@@ -80,4 +80,5 @@ document.getElementById('modelSearch').addEventListener('input', renderModels);
 document.getElementById('tabRec').addEventListener('click', () => { modelView = 'rec'; document.getElementById('tabRec').classList.add('on'); document.getElementById('tabAll').classList.remove('on'); renderModels(); });
 document.getElementById('tabAll').addEventListener('click', () => { modelView = 'all'; document.getElementById('tabAll').classList.add('on'); document.getElementById('tabRec').classList.remove('on'); renderModels(); });
 
+if (typeof tcaLocalizeDom === 'function') tcaLocalizeDom();
 load();

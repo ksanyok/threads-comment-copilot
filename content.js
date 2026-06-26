@@ -135,7 +135,7 @@
     if (p.done) {
       if (el.dataset.tcaUi !== 'done') {
         stripUi(el); el.dataset.tcaUi = 'done';
-        const mark = document.createElement('div'); mark.className = 'tca-done-mark'; mark.innerHTML = ic('check', 13) + '<span>написано</span>';
+        const mark = document.createElement('div'); mark.className = 'tca-done-mark'; mark.innerHTML = ic('check', 13) + L('<span>написано</span>');
         el.appendChild(mark);
       }
       return;
@@ -147,12 +147,12 @@
     if (p.score >= 1) {
       const dot = document.createElement('div'); dot.className = 'tca-dot' + (p.lead ? ' lead' : ''); el.appendChild(dot);
       const chip = document.createElement('div'); chip.className = 'tca-chip' + (p.lead ? ' lead' : '');
-      chip.textContent = (p.lead ? '🎯 ' : '💡 ') + (p.top || 'тема'); el.appendChild(chip);
+      chip.textContent = (p.lead ? '🎯 ' : '💡 ') + (p.top || L('тема')); el.appendChild(chip);
     }
     const btn = document.createElement('button');
     btn.className = 'tca-btn' + (p.score >= 1 ? ' tca-btn-rel' : '');
     btn.type = 'button'; btn.innerHTML = ic('pencil', 16);
-    btn.title = 'Сформировать комментарий и вставить в ответ';
+    btn.title = L('Сформировать комментарий и вставить в ответ');
     btn.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       startComment({ el, id: p.id, author: p.author, text: postText(el) });
@@ -172,11 +172,11 @@
     c.style.right = sidebarOpen ? '392px' : '18px'; // sit beside the sidebar, not on top of it
     const head = document.createElement('div'); head.className = 'tca-card-head';
     const h = document.createElement('span'); h.className = 'tca-card-title'; h.innerHTML = ic('logo', 16);
-    const ht = document.createElement('span'); ht.textContent = 'Комментарий для @' + (t.author || '—'); h.appendChild(ht);
+    const ht = document.createElement('span'); ht.textContent = L('Комментарий для @') + (t.author || '—'); h.appendChild(ht);
     const x = document.createElement('button'); x.className = 'tca-card-x'; x.innerHTML = ic('close', 18); x.onclick = closeCard;
     head.append(h, x); c.appendChild(head);
     const body = document.createElement('div'); body.className = 'tca-card-body';
-    body.innerHTML = '<div class="tca-status">⏳ Пишу комментарий…</div>';
+    body.innerHTML = L('<div class="tca-status">⏳ Пишу комментарий…</div>');
     c.appendChild(body);
     sendDraft(t.text, t.author, (resp) => renderCard(resp, autoInsert !== false));
   }
@@ -186,12 +186,12 @@
     body.innerHTML = '';
     if (!resp || !resp.ok) {
       const e = document.createElement('div'); e.className = 'tca-status err';
-      e.textContent = (resp && /ключ|key|openrouter/i.test(resp.error || '')) ? '⚠️ Нет ключа OpenRouter — откройте ⚙ настройки.' : '⚠️ ' + ((resp && resp.error) || 'нет ответа');
+      e.textContent = (resp && /ключ|key|openrouter/i.test(resp.error || '')) ? L('⚠️ Нет ключа OpenRouter — откройте ⚙ настройки.') : '⚠️ ' + ((resp && resp.error) || L('нет ответа'));
       body.appendChild(e); return;
     }
     const onPage = !!(target && target.el);
     const toneRow = document.createElement('div'); toneRow.className = 'tca-tone';
-    [['auto', 'Авто'], ['humor', 'С юмором'], ['mentor', 'Менторски']].forEach(([k, lbl]) => {
+    [['auto', L('Авто')], ['humor', L('С юмором')], ['mentor', L('Менторски')]].forEach(([k, lbl]) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'tca-tone-b' + (((target && target.tone) || 'auto') === k ? ' on' : ''); b.textContent = lbl;
       b.onclick = () => { if (target) target.tone = k; body.innerHTML = '<div class="tca-status">⏳…</div>'; sendDraft(target.text, target.author, (r) => renderCard(r, false)); };
       toneRow.appendChild(b);
@@ -202,13 +202,13 @@
     const cnt = document.createElement('span'); cnt.className = 'tca-count';
     const upd = () => cnt.textContent = [...ta.value].length + '/500'; upd(); ta.addEventListener('input', upd);
     const main = onPage
-      ? mkBtn('Вставить в ответ', () => doInsert(ta.value, main), 'send')
-      : mkBtn('Открыть пост', () => { navigator.clipboard.writeText(ta.value).catch(() => {}); window.open((target && target.url) || 'https://www.threads.com/', '_blank'); toast('Черновик скопирован. Откройте пост и вставьте (Cmd/Ctrl+V).'); }, 'open');
-    const regen = mkBtn('Ещё', () => { body.innerHTML = '<div class="tca-status">⏳…</div>'; sendDraft(target.text, target.author, (r) => renderCard(r, false)); }, 'refresh');
+      ? mkBtn(L('Вставить в ответ'), () => doInsert(ta.value, main), 'send')
+      : mkBtn(L('Открыть пост'), () => { navigator.clipboard.writeText(ta.value).catch(() => {}); window.open((target && target.url) || 'https://www.threads.com/', '_blank'); toast(L('Черновик скопирован. Откройте пост и вставьте (Cmd/Ctrl+V).')); }, 'open');
+    const regen = mkBtn(L('Ещё'), () => { body.innerHTML = '<div class="tca-status">⏳…</div>'; sendDraft(target.text, target.author, (r) => renderCard(r, false)); }, 'refresh');
     const copy = mkBtn('', () => copyText(ta.value, copy), 'copy');
     row.append(cnt, spacer(), main, regen, copy); body.appendChild(row);
     const hint = document.createElement('div'); hint.className = 'tca-hint';
-    hint.textContent = onPage ? 'Текст ляжет в окно ответа Threads. «Опублікувати» — вы сами.' : 'Это пост из фонового поиска. Откройте его и вставьте черновик.';
+    hint.textContent = onPage ? L('Текст ляжет в окно ответа Threads. «Опублікувати» — вы сами.') : L('Это пост из фонового поиска. Откройте его и вставьте черновик.');
     body.appendChild(hint);
     if (autoInsert && onPage) doInsert(ta.value, main);
   }
@@ -218,8 +218,8 @@
     if (btn) btn.textContent = '⏳…';
     const r = await insertReply(target && target.el, text);
     if (target) { markCommented(target.id); recordHistory({ id: target.id, author: target.author, text }); }
-    if (btn) { btn.textContent = r.method === 'inserted' ? '✓ Вставлено' : '📋 Cmd+V'; setTimeout(() => (btn.innerHTML = orig), 2600); }
-    toast(r.method === 'inserted' ? 'Готово. Проверьте и нажмите «Опублікувати» в Threads.' : 'Скопировано в буфер. Откройте ответ и вставьте (Cmd/Ctrl+V).');
+    if (btn) { btn.textContent = r.method === 'inserted' ? L('✓ Вставлено') : L('📋 Cmd+V'); setTimeout(() => (btn.innerHTML = orig), 2600); }
+    toast(r.method === 'inserted' ? L('Готово. Проверьте и нажмите «Опублікувати» в Threads.') : L('Скопировано в буфер. Откройте ответ и вставьте (Cmd/Ctrl+V).'));
   }
 
   function sendDraft(text, author, cb) {
@@ -296,7 +296,7 @@
   function buildFab() {
     if (document.getElementById('tca-fab')) return;
     const fab = document.createElement('button');
-    fab.id = 'tca-fab'; fab.type = 'button'; fab.title = 'Подходящие ветки для комментария';
+    fab.id = 'tca-fab'; fab.type = 'button'; fab.title = L('Подходящие ветки для комментария');
     fab.innerHTML = ic('logo', 26) + '<span id="tca-fab-badge">0</span>';
     fab.addEventListener('click', () => (sidebarOpen ? closeSidebar() : openSidebar()));
     document.body.appendChild(fab);
@@ -311,7 +311,7 @@
   function showNote(n) {
     let el = document.getElementById('tca-note');
     if (!el) { el = document.createElement('div'); el.id = 'tca-note'; el.onclick = () => { openSidebar(); }; document.body.appendChild(el); }
-    el.textContent = '🧵 ' + n + ' новых тематических веток — открыть';
+    el.textContent = '🧵 ' + n + L(' новых тематических веток — открыть');
     el.classList.add('show');
   }
   function hideNote() { const el = document.getElementById('tca-note'); if (el) el.classList.remove('show'); }
@@ -319,9 +319,9 @@
   const SEARCHES = [
     ['SEO', 'SEO просування сайту'],
     ['WooCommerce', 'woocommerce магазин товари'],
-    ['Стартапы', 'стартап засновник продукт'],
+    [L('Стартапы'), 'стартап засновник продукт'],
     ['WordPress', 'wordpress сайт'],
-    ['Дети', 'виховання дітей завдання винагорода'],
+    [L('Дети'), 'виховання дітей завдання винагорода'],
     ['AI', 'штучний інтелект автоматизація']
   ];
   function openSidebar() {
@@ -331,25 +331,25 @@
     sb.innerHTML = '';
 
     const head = document.createElement('div'); head.className = 'tca-sb-head';
-    const h = document.createElement('span'); h.textContent = '🧵 Ветки для комментария';
+    const h = document.createElement('span'); h.textContent = L('🧵 Ветки для комментария');
     const x = document.createElement('button'); x.className = 'tca-sb-x'; x.textContent = '✕'; x.onclick = closeSidebar;
     head.append(h, x); sb.appendChild(head);
 
     const list = document.createElement('div'); list.className = 'tca-sb-list';
     const toggle = document.createElement('div'); toggle.className = 'tca-sb-toggle';
-    const relB = document.createElement('button'); relB.textContent = 'На странице';
-    const allB = document.createElement('button'); allB.textContent = 'Все';
-    const foundB = document.createElement('button'); foundB.textContent = 'Найдено';
-    const prodB = document.createElement('button'); prodB.textContent = 'Продукт';
-    const histB = document.createElement('button'); histB.textContent = 'История';
-    const postB = document.createElement('button'); postB.textContent = 'Пост';
+    const relB = document.createElement('button'); relB.textContent = L('На странице');
+    const allB = document.createElement('button'); allB.textContent = L('Все');
+    const foundB = document.createElement('button'); foundB.textContent = L('Найдено');
+    const prodB = document.createElement('button'); prodB.textContent = L('Продукт');
+    const histB = document.createElement('button'); histB.textContent = L('История');
+    const postB = document.createElement('button'); postB.textContent = L('Пост');
     const setMode = (m) => { sidebarMode = m; relB.classList.toggle('on', m === 'rel'); allB.classList.toggle('on', m === 'all'); foundB.classList.toggle('on', m === 'found'); prodB.classList.toggle('on', m === 'product'); histB.classList.toggle('on', m === 'history'); postB.classList.toggle('on', m === 'post'); renderList(list); };
     relB.onclick = () => setMode('rel'); allB.onclick = () => setMode('all'); foundB.onclick = () => setMode('found'); prodB.onclick = () => setMode('product'); histB.onclick = () => setMode('history'); postB.onclick = () => setMode('post');
     toggle.append(relB, allB, foundB, prodB, histB, postB); sb.appendChild(toggle);
-    chrome.storage.local.get('tcaFound', (o) => { const n = (o.tcaFound || []).length; if (n) foundB.textContent = 'Найдено ' + n; });
+    chrome.storage.local.get('tcaFound', (o) => { const n = (o.tcaFound || []).length; if (n) foundB.textContent = L('Найдено ') + n; });
 
     const search = document.createElement('div'); search.className = 'tca-sb-search';
-    const lbl = document.createElement('div'); lbl.className = 'tca-sb-lbl'; lbl.textContent = 'Искать по теме (даже то, чего нет в ленте):';
+    const lbl = document.createElement('div'); lbl.className = 'tca-sb-lbl'; lbl.textContent = L('Искать по теме (даже то, чего нет в ленте):');
     const chips = document.createElement('div'); chips.className = 'tca-sb-chips';
     SEARCHES.forEach(([k, q]) => {
       const b = document.createElement('button'); b.className = 'tca-sb-chip'; b.textContent = '🔎 ' + k;
@@ -377,27 +377,27 @@
     if (!items.length) {
       const e = document.createElement('div'); e.className = 'tca-sb-empty';
       e.textContent = sidebarMode === 'rel'
-        ? 'Подходящих веток на странице нет. Откройте поиск по теме выше или прокрутите ленту.'
-        : 'Постов на странице не найдено. Прокрутите ленту.';
+        ? L('Подходящих веток на странице нет. Откройте поиск по теме выше или прокрутите ленту.')
+        : L('Постов на странице не найдено. Прокрутите ленту.');
       list.appendChild(e);
     } else {
       items.forEach(p => list.appendChild(sidebarItem(p)));
     }
   }
   function renderFound(list) {
-    list.innerHTML = '<div class="tca-sb-empty">Загрузка…</div>';
+    list.innerHTML = L('<div class="tca-sb-empty">Загрузка…</div>');
     chrome.storage.local.get(['tcaFound', COMMENTED_KEY], (o) => {
       const done = new Set(o[COMMENTED_KEY] || []);
       const items = (o.tcaFound || []).filter(p => !done.has(p.id)).slice(0, 40);
       list.innerHTML = '';
       if (!items.length) {
         const e = document.createElement('div'); e.className = 'tca-sb-empty';
-        e.textContent = 'Фоновый поиск пока ничего не нашёл. Он идёт раз в N минут (⚙), либо нажмите «🔔 Поискать новые сейчас» в окне расширения.';
+        e.textContent = L('Фоновый поиск пока ничего не нашёл. Он идёт раз в N минут (⚙), либо нажмите «🔔 Поискать новые сейчас» в окне расширения.');
         list.appendChild(e); return;
       }
       const bar = document.createElement('div'); bar.className = 'tca-sb-clear';
-      const cnt = document.createElement('span'); cnt.textContent = items.length + ' найдено';
-      const clr = document.createElement('button'); clr.textContent = '🗑 Очистить';
+      const cnt = document.createElement('span'); cnt.textContent = items.length + L(' найдено');
+      const clr = document.createElement('button'); clr.textContent = L('🗑 Очистить');
       clr.onclick = () => chrome.storage.local.set({ tcaFound: [] }, () => renderFound(list));
       bar.append(cnt, clr); list.appendChild(bar);
       items.forEach(p => list.appendChild(foundItem(p)));
@@ -406,39 +406,39 @@
   function foundItem(p) {
     const it = document.createElement('div'); it.className = 'tca-it';
     const meta = document.createElement('div'); meta.className = 'tca-it-meta';
-    const chip = document.createElement('span'); chip.className = 'tca-it-chip' + (p.lead ? ' lead' : ''); chip.textContent = (p.lead ? '🎯 ' : '') + (p.label || p.top || 'тема');
+    const chip = document.createElement('span'); chip.className = 'tca-it-chip' + (p.lead ? ' lead' : ''); chip.textContent = (p.lead ? '🎯 ' : '') + (p.label || p.top || L('тема'));
     const au = document.createElement('span'); au.className = 'tca-it-author'; au.textContent = '@' + (p.author || '—');
     const tm = document.createElement('span'); tm.className = 'tca-it-time'; tm.textContent = relTime(p.ts);
     meta.append(chip, au, tm); it.appendChild(meta);
     const sn = document.createElement('div'); sn.className = 'tca-it-sn'; sn.textContent = (p.text || '').slice(0, 170); it.appendChild(sn);
     const row = document.createElement('div'); row.className = 'tca-it-row';
-    const open = mkBtn('Открыть', () => window.open(p.url || 'https://www.threads.com/', '_blank'), 'open'); open.classList.add('ghost');
-    const gen = mkBtn('Черновик', () => startComment({ el: null, id: p.id, author: p.author, text: p.text, url: p.url }, false), 'pencil');
+    const open = mkBtn(L('Открыть'), () => window.open(p.url || 'https://www.threads.com/', '_blank'), 'open'); open.classList.add('ghost');
+    const gen = mkBtn(L('Черновик'), () => startComment({ el: null, id: p.id, author: p.author, text: p.text, url: p.url }, false), 'pencil');
     row.append(open, spacer(), gen); it.appendChild(row);
     return it;
   }
   function relTime(ts) {
     if (!ts) return '';
     const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'только что';
-    const m = Math.floor(s / 60); if (m < 60) return m + ' мин';
-    const h = Math.floor(m / 60); if (h < 24) return h + ' ч';
-    return Math.floor(h / 24) + ' дн';
+    if (s < 60) return L('только что');
+    const m = Math.floor(s / 60); if (m < 60) return m + L(' мин');
+    const h = Math.floor(m / 60); if (h < 24) return h + L(' ч');
+    return Math.floor(h / 24) + L(' дн');
   }
   // "🕘 История" tab — what you already wrote (so you don't write twice).
   function renderHistory(list) {
-    list.innerHTML = '<div class="tca-sb-empty">Загрузка…</div>';
+    list.innerHTML = L('<div class="tca-sb-empty">Загрузка…</div>');
     chrome.storage.local.get('tcaHistory', (o) => {
       const items = (o.tcaHistory || []).slice(0, 60);
       list.innerHTML = '';
       if (!items.length) {
         const e = document.createElement('div'); e.className = 'tca-sb-empty';
-        e.textContent = 'Пока пусто. Здесь будут комментарии, которые вы уже написали.';
+        e.textContent = L('Пока пусто. Здесь будут комментарии, которые вы уже написали.');
         list.appendChild(e); return;
       }
       const bar = document.createElement('div'); bar.className = 'tca-sb-clear';
-      const cnt = document.createElement('span'); cnt.textContent = items.length + ' записей';
-      const clr = document.createElement('button'); clr.innerHTML = ic('trash') + '<span>Очистить</span>';
+      const cnt = document.createElement('span'); cnt.textContent = items.length + L(' записей');
+      const clr = document.createElement('button'); clr.innerHTML = ic('trash') + L('<span>Очистить</span>');
       clr.onclick = () => chrome.storage.local.set({ tcaHistory: [] }, () => renderHistory(list));
       bar.append(cnt, clr); list.appendChild(bar);
       items.forEach(p => list.appendChild(historyItem(p)));
@@ -452,8 +452,8 @@
     meta.append(au, tm); it.appendChild(meta);
     const sn = document.createElement('div'); sn.className = 'tca-it-sn'; sn.textContent = (p.text || '').slice(0, 220); it.appendChild(sn);
     const row = document.createElement('div'); row.className = 'tca-it-row';
-    const open = mkBtn('Открыть пост', () => { if (index.get(p.id)) focusPost(p.id); else if (/^https?:/.test(p.id)) window.open(p.id, '_blank'); }, 'open'); open.classList.add('ghost');
-    const copy = mkBtn('Копировать', () => navigator.clipboard.writeText(p.text || ''), 'copy');
+    const open = mkBtn(L('Открыть пост'), () => { if (index.get(p.id)) focusPost(p.id); else if (/^https?:/.test(p.id)) window.open(p.id, '_blank'); }, 'open'); open.classList.add('ghost');
+    const copy = mkBtn(L('Копировать'), () => navigator.clipboard.writeText(p.text || ''), 'copy');
     row.append(open, spacer(), copy); it.appendChild(row);
     return it;
   }
@@ -462,25 +462,25 @@
   function renderPost(list) {
     list.innerHTML = '';
     const intro = document.createElement('div'); intro.className = 'tca-sb-empty';
-    intro.textContent = 'Пост себе в ленту. Нажмите «Запропонувати теми», выберите тему — сформирую пост в вашем стиле. Публикуете сами.';
+    intro.textContent = L('Пост себе в ленту. Нажмите «Запропонувати теми», выберите тему — сформирую пост в вашем стиле. Публикуете сами.');
     list.appendChild(intro);
     const chips = document.createElement('div'); chips.className = 'tca-sb-prod';
     const bar = document.createElement('div'); bar.className = 'tca-sb-prod';
-    bar.appendChild(mkBtn('Запропонувати теми', () => loadPostTopics(chips), 'refresh'));
+    bar.appendChild(mkBtn(L('Запропонувати теми'), () => loadPostTopics(chips), 'refresh'));
     list.appendChild(bar); list.appendChild(chips);
     const wrap = document.createElement('div'); wrap.style.padding = '4px 14px 16px';
-    const ta = document.createElement('textarea'); ta.className = 'tca-text'; ta.rows = 2; ta.placeholder = '…или своя тема для поста'; wrap.appendChild(ta);
-    const gen = mkBtn('Сгенерировать пост', () => { const t = ta.value.trim(); if (t) startPost(t); }, 'pencil'); gen.style.marginTop = '8px';
+    const ta = document.createElement('textarea'); ta.className = 'tca-text'; ta.rows = 2; ta.placeholder = L('…или своя тема для поста'); wrap.appendChild(ta);
+    const gen = mkBtn(L('Сгенерировать пост'), () => { const t = ta.value.trim(); if (t) startPost(t); }, 'pencil'); gen.style.marginTop = '8px';
     wrap.appendChild(gen); list.appendChild(wrap);
   }
   function loadPostTopics(chips) {
-    chips.innerHTML = '<div class="tca-sb-lbl">⏳ Подбираю темы…</div>';
+    chips.innerHTML = L('<div class="tca-sb-lbl">⏳ Подбираю темы…</div>');
     try {
       chrome.runtime.sendMessage({ type: 'suggestTopics' }, (r) => {
         chips.innerHTML = '';
         const seed = (typeof TCA_POST_TOPICS !== 'undefined') ? TCA_POST_TOPICS : [];
         const topics = (r && r.ok && r.topics && r.topics.length) ? r.topics : seed;
-        if (!topics.length) { chips.innerHTML = '<div class="tca-sb-lbl">Не удалось подобрать. Впишите тему вручную ниже.</div>'; return; }
+        if (!topics.length) { chips.innerHTML = L('<div class="tca-sb-lbl">Не удалось подобрать. Впишите тему вручную ниже.</div>'); return; }
         topics.forEach(t => { const b = document.createElement('button'); b.className = 'tca-prod-chip'; b.textContent = t; b.onclick = () => startPost(t); chips.appendChild(b); });
       });
     } catch (e) { chips.innerHTML = ''; }
@@ -492,10 +492,10 @@
     c.style.right = sidebarOpen ? '392px' : '18px';
     const head = document.createElement('div'); head.className = 'tca-card-head';
     const h = document.createElement('span'); h.className = 'tca-card-title'; h.innerHTML = ic('pencil', 16);
-    const ht = document.createElement('span'); ht.textContent = 'Пост: ' + topic.slice(0, 38); h.appendChild(ht);
+    const ht = document.createElement('span'); ht.textContent = L('Пост: ') + topic.slice(0, 38); h.appendChild(ht);
     const x = document.createElement('button'); x.className = 'tca-card-x'; x.innerHTML = ic('close', 18); x.onclick = closeCard;
     head.append(h, x); c.appendChild(head);
-    const body = document.createElement('div'); body.className = 'tca-card-body'; body.innerHTML = '<div class="tca-status">⏳ Пишу пост…</div>'; c.appendChild(body);
+    const body = document.createElement('div'); body.className = 'tca-card-body'; body.innerHTML = L('<div class="tca-status">⏳ Пишу пост…</div>'); c.appendChild(body);
     sendPost(topic, (resp) => renderPostCard(resp, topic));
   }
   function sendPost(topic, cb) {
@@ -507,17 +507,17 @@
     body.innerHTML = '';
     if (!resp || !resp.ok) {
       const e = document.createElement('div'); e.className = 'tca-status err';
-      e.textContent = (resp && /ключ|key|openrouter/i.test(resp.error || '')) ? '⚠️ Нет ключа OpenRouter — откройте ⚙ настройки.' : '⚠️ ' + ((resp && resp.error) || 'нет ответа');
+      e.textContent = (resp && /ключ|key|openrouter/i.test(resp.error || '')) ? L('⚠️ Нет ключа OpenRouter — откройте ⚙ настройки.') : '⚠️ ' + ((resp && resp.error) || L('нет ответа'));
       body.appendChild(e); return;
     }
     const ta = document.createElement('textarea'); ta.className = 'tca-text'; ta.rows = 6; ta.value = resp.draft; body.appendChild(ta);
     const row = document.createElement('div'); row.className = 'tca-row';
     const cnt = document.createElement('span'); cnt.className = 'tca-count';
     const upd = () => cnt.textContent = [...ta.value].length + '/500'; upd(); ta.addEventListener('input', upd);
-    const copy = mkBtn('Скопировать', () => copyText(ta.value, copy), 'copy');
-    const regen = mkBtn('Ещё', () => { body.innerHTML = '<div class="tca-status">⏳…</div>'; sendPost(topic, (r) => renderPostCard(r, topic)); }, 'refresh');
+    const copy = mkBtn(L('Скопировать'), () => copyText(ta.value, copy), 'copy');
+    const regen = mkBtn(L('Ещё'), () => { body.innerHTML = '<div class="tca-status">⏳…</div>'; sendPost(topic, (r) => renderPostCard(r, topic)); }, 'refresh');
     row.append(cnt, spacer(), regen, copy); body.appendChild(row);
-    const hint = document.createElement('div'); hint.className = 'tca-hint'; hint.textContent = 'Скопируйте и вставьте в окно нового поста Threads. Публикуете вы сами.'; body.appendChild(hint);
+    const hint = document.createElement('div'); hint.className = 'tca-hint'; hint.textContent = L('Скопируйте и вставьте в окно нового поста Threads. Публикуете вы сами.'); body.appendChild(hint);
   }
   // "🎯 Продукт" tab — pick a product, see posts where writing about it fits.
   function renderProduct(list) {
@@ -531,7 +531,7 @@
     list.appendChild(pc);
     if (!selectedProduct) {
       const e = document.createElement('div'); e.className = 'tca-sb-empty';
-      e.textContent = 'Выберите продукт — покажу посты на странице, где о нём уместно написать, и сформирую комментарий с акцентом на него.';
+      e.textContent = L('Выберите продукт — покажу посты на странице, где о нём уместно написать, и сформирую комментарий с акцентом на него.');
       list.appendChild(e); return;
     }
     const prod = PRODUCTS.find(p => p.key === selectedProduct);
@@ -539,7 +539,7 @@
     items.sort((a, b) => (a.done - b.done) || (b.score - a.score)); items = items.slice(0, 50);
     if (!items.length) {
       const e = document.createElement('div'); e.className = 'tca-sb-empty';
-      e.textContent = 'На странице нет постов под «' + prod.name + '». Откройте поиск по теме (выше) и прокрутите ленту.';
+      e.textContent = L('На странице нет постов под «') + prod.name + L('». Откройте поиск по теме (выше) и прокрутите ленту.');
       list.appendChild(e); return;
     }
     items.forEach(p => list.appendChild(productItem(p, prod)));
@@ -550,14 +550,14 @@
     const chip = document.createElement('span'); chip.className = 'tca-it-chip' + (p.lead ? ' lead' : ''); chip.textContent = (p.lead ? '🎯 ' : '') + (p.top || prod.name);
     const au = document.createElement('span'); au.className = 'tca-it-author'; au.textContent = '@' + (p.author || '—');
     meta.append(chip, au);
-    if (p.done) { const d = document.createElement('span'); d.className = 'tca-it-time done'; d.textContent = '✓ написано'; meta.appendChild(d); }
+    if (p.done) { const d = document.createElement('span'); d.className = 'tca-it-time done'; d.textContent = L('✓ написано'); meta.appendChild(d); }
     it.appendChild(meta);
     const sn = document.createElement('div'); sn.className = 'tca-it-sn'; sn.textContent = p.text.slice(0, 170); it.appendChild(sn);
     const row = document.createElement('div'); row.className = 'tca-it-row';
-    const open = mkBtn('Открыть', () => focusPost(p.id), 'open'); open.classList.add('ghost');
+    const open = mkBtn(L('Открыть'), () => focusPost(p.id), 'open'); open.classList.add('ghost');
     let gen;
-    if (p.done) { gen = mkBtn('Написано', () => {}, 'check'); gen.disabled = true; }
-    else gen = mkBtn('Про ' + prod.name, () => { gen.disabled = true; focusPost(p.id); startComment({ el: index.get(p.id), id: p.id, author: p.author, text: p.text, product: prod }); }, 'pencil');
+    if (p.done) { gen = mkBtn(L('Написано'), () => {}, 'check'); gen.disabled = true; }
+    else gen = mkBtn(L('Про ') + prod.name, () => { gen.disabled = true; focusPost(p.id); startComment({ el: index.get(p.id), id: p.id, author: p.author, text: p.text, product: prod }); }, 'pencil');
     row.append(open, spacer(), gen); it.appendChild(row);
     return it;
   }
@@ -565,17 +565,17 @@
   function sidebarItem(p) {
     const it = document.createElement('div'); it.className = 'tca-it' + (p.done ? ' done' : '');
     const meta = document.createElement('div'); meta.className = 'tca-it-meta';
-    const chip = document.createElement('span'); chip.className = 'tca-it-chip' + (p.score >= 1 ? '' : ' off'); chip.textContent = p.score >= 1 ? (p.top || 'тема') : 'пост';
+    const chip = document.createElement('span'); chip.className = 'tca-it-chip' + (p.score >= 1 ? '' : ' off'); chip.textContent = p.score >= 1 ? (p.top || L('тема')) : L('пост');
     const au = document.createElement('span'); au.className = 'tca-it-author'; au.textContent = '@' + (p.author || '—');
     meta.append(chip, au);
-    if (p.done) { const d = document.createElement('span'); d.className = 'tca-it-time done'; d.textContent = '✓ написано'; meta.appendChild(d); }
+    if (p.done) { const d = document.createElement('span'); d.className = 'tca-it-time done'; d.textContent = L('✓ написано'); meta.appendChild(d); }
     it.appendChild(meta);
     const sn = document.createElement('div'); sn.className = 'tca-it-sn'; sn.textContent = p.text.slice(0, 170); it.appendChild(sn);
     const row = document.createElement('div'); row.className = 'tca-it-row';
-    const open = mkBtn('Открыть', () => focusPost(p.id), 'open'); open.classList.add('ghost');
+    const open = mkBtn(L('Открыть'), () => focusPost(p.id), 'open'); open.classList.add('ghost');
     let gen;
-    if (p.done) { gen = mkBtn('Написано', () => {}, 'check'); gen.disabled = true; }
-    else gen = mkBtn('Написать', () => { gen.disabled = true; focusPost(p.id); startComment({ el: index.get(p.id), id: p.id, author: p.author, text: p.text }); }, 'pencil');
+    if (p.done) { gen = mkBtn(L('Написано'), () => {}, 'check'); gen.disabled = true; }
+    else gen = mkBtn(L('Написать'), () => { gen.disabled = true; focusPost(p.id); startComment({ el: index.get(p.id), id: p.id, author: p.author, text: p.text }); }, 'pencil');
     row.append(open, spacer(), gen); it.appendChild(row);
     return it;
   }

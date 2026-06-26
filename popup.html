@@ -57,32 +57,33 @@
 </head>
 <body>
   <header>
-    <span class="title">🧵 Комментарии Threads</span>
+    <span class="title" data-i18n>🧵 Комментарии Threads</span>
     <span class="sp"></span>
-    <button class="icon" id="settings" title="Настройки">⚙</button>
+    <button class="icon" id="settings" data-i18n-title title="Настройки">⚙</button>
   </header>
 
-  <p class="lead">Открой ленту или поиск Threads по своей теме — расширение подберёт подходящие ветки. Или выбери тему ниже:</p>
+  <p class="lead" data-i18n>Открой ленту или поиск Threads по своей теме — расширение подберёт подходящие ветки. Или выбери тему ниже:</p>
   <div class="themes" id="themes"></div>
 
-  <button class="btn" id="scan">🔄 Показать подходящие на странице</button>
-  <button class="btn" id="pollNow" style="margin-top:8px;background:#202327;border:1px solid var(--line)">🔔 Поискать новые в фоне сейчас</button>
+  <button class="btn" id="scan" data-i18n>🔄 Показать подходящие на странице</button>
+  <button class="btn" id="pollNow" data-i18n style="margin-top:8px;background:#202327;border:1px solid var(--line)">🔔 Поискать новые в фоне сейчас</button>
   <div id="msg"></div>
   <div id="list"></div>
 
-  <div class="div">или впишите текст вручную</div>
-  <textarea id="input" placeholder="Вставьте сюда пост, на который пишем комментарий…"></textarea>
-  <button class="btn" id="gen" style="margin-top:9px">Сформировать комментарий</button>
+  <div class="div" data-i18n>или впишите текст вручную</div>
+  <textarea id="input" data-i18n-ph placeholder="Вставьте сюда пост, на который пишем комментарий…"></textarea>
+  <button class="btn" id="gen" data-i18n style="margin-top:9px">Сформировать комментарий</button>
   <div id="manualWrap"></div>
 
-  <div class="div">пост мне в ленту</div>
-  <p class="lead">Нажмите «Запропонувати теми» — подберу темы в вашем стиле и языке. Или впишите свою. Публикуете сами.</p>
-  <button class="btn" id="suggestTopics" style="background:#202327;border:1px solid var(--line)">💡 Запропонувати теми</button>
+  <div class="div" data-i18n>пост мне в ленту</div>
+  <p class="lead" data-i18n>Нажмите «Запропонувати теми» — подберу темы в вашем стиле и языке. Или впишите свою. Публикуете сами.</p>
+  <button class="btn" id="suggestTopics" data-i18n style="background:#202327;border:1px solid var(--line)">💡 Запропонувати теми</button>
   <div class="themes" id="postThemes" style="margin-top:8px"></div>
-  <textarea id="postInput" placeholder="…или своя тема для поста" style="min-height:42px;margin-top:6px"></textarea>
-  <button class="btn" id="genPost" style="margin-top:9px">Сгенерировать пост</button>
+  <textarea id="postInput" data-i18n-ph placeholder="…или своя тема для поста" style="min-height:42px;margin-top:6px"></textarea>
+  <button class="btn" id="genPost" data-i18n style="margin-top:9px">Сгенерировать пост</button>
   <div id="postWrap"></div>
 
+  <script src="i18n.js"></script>
   <script src="defaults.js"></script>
   <script src="popup.js"></script>
 </body>

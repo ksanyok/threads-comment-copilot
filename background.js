@@ -1,5 +1,6 @@
 // Service worker: drafts a comment via OpenRouter (called from the content script + popup).
 importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, guidelines)
+importScripts('i18n.js'); // provides L() for localized notifications/errors
 try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -133,11 +134,11 @@ async function generate(s, messages, maxChars) {
   out = stripForeignLinks(out);
   const lim = maxChars || 480;
   if ([...out].length > lim) out = [...out].slice(0, lim - 1).join('') + '…';
-  if (!out) return { ok: false, error: 'Пустой ответ модели.' };
+  if (!out) return { ok: false, error: L('Пустой ответ модели.') };
   return { ok: true, draft: out };
 }
 
-const NO_KEY = { ok: false, error: 'Не задан ключ OpenRouter. Откройте настройки расширения (⚙).' };
+const NO_KEY = { ok: false, error: L('Не задан ключ OpenRouter. Откройте настройки расширения (⚙).') };
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === 'draft') {
@@ -182,11 +183,11 @@ const SEEN_KEY = 'tcaSeen';
 const POLL_TOPICS = [
   ['SEO', 'SEO просування сайту'],
   ['WooCommerce', 'woocommerce магазин товари'],
-  ['Стартапы', 'стартап засновник продукт'],
+  [L('Стартапы'), 'стартап засновник продукт'],
   ['WordPress', 'wordpress сайт'],
-  ['Дети', 'виховання дітей завдання винагорода'],
+  [L('Дети'), 'виховання дітей завдання винагорода'],
   ['AI', 'штучний інтелект автоматизація'],
-  ['Приложения', 'мобільний застосунок додаток']
+  [L('Приложения'), 'мобільний застосунок додаток']
 ];
 let polling = false, rotateIdx = 0, lastPollUrl = null;
 
@@ -272,7 +273,7 @@ async function poll(manual) {
       chrome.notifications.create('tcaPoll', {
         type: 'basic',
         iconUrl: 'icon128.png',
-        title: `🧵 ${fresh.length} новых постов по теме: ${label}`,
+        title: L('🧵 $1 новых постов по теме: $2', fresh.length, label),
         message: (top.author ? '@' + top.author + ': ' : '') + (top.text || '').replace(/\s+/g, ' ').slice(0, 140),
         priority: 1
       });

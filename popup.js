@@ -13,7 +13,7 @@ const THEMES = [
   { k: 'WordPress',  q: 'wordpress сайт' },
   { k: 'Стартапи',   q: 'стартап засновник продукт' },
   { k: 'Додатки',    q: 'розробка мобільного застосунку' },
-  { k: 'Дети',       q: 'виховання дітей завдання винагорода' },
+  { k: L('Дети'),       q: 'виховання дітей завдання винагорода' },
   { k: 'AI',         q: 'штучний інтелект автоматизація' }
 ];
 
@@ -40,8 +40,8 @@ function bgDraft(text, author) {
 // ---------- messages ----------
 function setMsg(text, isErr) { const m = $('msg'); m.className = isErr ? 'err' : ''; m.textContent = text || ''; }
 function settingsLink() {
-  const m = $('msg'); m.className = 'err'; m.textContent = 'Не задан ключ OpenRouter. ';
-  const a = document.createElement('span'); a.className = 'hintlink'; a.textContent = 'Открыть настройки';
+  const m = $('msg'); m.className = 'err'; m.textContent = L('Не задан ключ OpenRouter. ');
+  const a = document.createElement('span'); a.className = 'hintlink'; a.textContent = L('Открыть настройки');
   a.addEventListener('click', () => chrome.runtime.openOptionsPage()); m.appendChild(a);
 }
 
@@ -59,44 +59,44 @@ async function openSearch(q) {
   const tab = await activeTab();
   if (isThreads(tab)) chrome.tabs.update(tab.id, { url });
   else chrome.tabs.create({ url });
-  setMsg('Открыл поиск Threads. Подождите пару секунд, прокрутите ленту и нажмите «Показать подходящие».', false);
+  setMsg(L('Открыл поиск Threads. Подождите пару секунд, прокрутите ленту и нажмите «Показать подходящие».'), false);
   $('list').innerHTML = '';
 }
 
 // ---------- suggestions from the page ----------
 async function loadSuggestions() {
-  $('scan').disabled = true; setMsg('⏳ Читаю страницу…', false); $('list').innerHTML = '';
+  $('scan').disabled = true; setMsg(L('⏳ Читаю страницу…'), false); $('list').innerHTML = '';
   const tab = await activeTab();
   if (!isThreads(tab)) {
     $('scan').disabled = false;
     setMsg('', false);
-    const m = $('msg'); m.className = ''; m.textContent = 'Откройте Threads, чтобы подобрать ветки. ';
-    const a = document.createElement('span'); a.className = 'hintlink'; a.textContent = 'Открыть Threads';
+    const m = $('msg'); m.className = ''; m.textContent = L('Откройте Threads, чтобы подобрать ветки. ');
+    const a = document.createElement('span'); a.className = 'hintlink'; a.textContent = L('Открыть Threads');
     a.addEventListener('click', () => chrome.tabs.create({ url: 'https://www.threads.com/' }));
     m.appendChild(a);
     return;
   }
   const resp = await tabSend(tab.id, { type: 'tcaCollect' });
   $('scan').disabled = false;
-  if (!resp) { setMsg('Не удалось прочитать страницу. Обновите вкладку Threads (она должна быть открыта и прокручена).', true); return; }
+  if (!resp) { setMsg(L('Не удалось прочитать страницу. Обновите вкладку Threads (она должна быть открыта и прокручена).'), true); return; }
   const items = resp.items || [];
-  if (!items.length) { setMsg('Подходящих веток на этой странице не нашлось. Прокрутите ленту/поиск по теме и повторите.', false); return; }
-  setMsg(items.length + ' подходящих веток на странице:', false);
+  if (!items.length) { setMsg(L('Подходящих веток на этой странице не нашлось. Прокрутите ленту/поиск по теме и повторите.'), false); return; }
+  setMsg(items.length + L(' подходящих веток на странице:'), false);
   items.forEach(p => $('list').appendChild(renderItem(tab.id, p)));
 }
 
 function renderItem(tabId, p) {
   const it = document.createElement('div'); it.className = 'it';
   const meta = document.createElement('div'); meta.className = 'it-meta';
-  const chip = document.createElement('span'); chip.className = 'it-chip'; chip.textContent = p.top || 'тема';
+  const chip = document.createElement('span'); chip.className = 'it-chip'; chip.textContent = p.top || L('тема');
   const au = document.createElement('span'); au.className = 'it-author'; au.textContent = '@' + (p.author || '—');
   meta.append(chip, au); it.appendChild(meta);
   const sn = document.createElement('div'); sn.className = 'it-sn'; sn.textContent = (p.text || '').slice(0, 180); it.appendChild(sn);
 
   const row = document.createElement('div'); row.className = 'row';
-  const open = document.createElement('button'); open.className = 'act'; open.textContent = '↗ Открыть';
+  const open = document.createElement('button'); open.className = 'act'; open.textContent = L('↗ Открыть');
   open.addEventListener('click', () => tabSend(tabId, { type: 'tcaFocus', id: p.id }));
-  const gen = document.createElement('button'); gen.className = 'act primary'; gen.textContent = '✨ Комментарий';
+  const gen = document.createElement('button'); gen.className = 'act primary'; gen.textContent = L('✨ Комментарий');
   gen.addEventListener('click', () => genItem(tabId, it, p, gen));
   const sp = document.createElement('span'); sp.className = 'sp';
   row.append(open, sp, gen); it.appendChild(row);
@@ -106,14 +106,14 @@ function renderItem(tabId, p) {
 async function genItem(tabId, it, p, gen) {
   let box = it.querySelector('.it-draft');
   if (!box) { box = document.createElement('div'); box.className = 'it-draft'; it.appendChild(box); }
-  box.innerHTML = '<div class="status">⏳ Пишу комментарий…</div>';
+  box.innerHTML = L('<div class="status">⏳ Пишу комментарий…</div>');
   gen.disabled = true;
   const resp = await bgDraft(p.text, p.author);
   gen.disabled = false;
   box.innerHTML = '';
   if (!resp || !resp.ok) {
-    if (resp && /ключ|key|openrouter/i.test(resp.error || '')) { box.innerHTML = '<div class="status err">Нет ключа OpenRouter — откройте ⚙</div>'; }
-    else box.innerHTML = '<div class="status err">⚠️ ' + ((resp && resp.error) || 'нет ответа') + '</div>';
+    if (resp && /ключ|key|openrouter/i.test(resp.error || '')) { box.innerHTML = L('<div class="status err">Нет ключа OpenRouter — откройте ⚙</div>'); }
+    else box.innerHTML = '<div class="status err">⚠️ ' + ((resp && resp.error) || L('нет ответа')) + '</div>';
     return;
   }
   const ta = document.createElement('textarea'); ta.value = resp.draft; ta.rows = 4; box.appendChild(ta);
@@ -122,14 +122,14 @@ async function genItem(tabId, it, p, gen) {
   const upd = () => count.textContent = [...ta.value].length + '/500';
   upd(); ta.addEventListener('input', upd);
   const sp = document.createElement('span'); sp.className = 'sp';
-  const ins = document.createElement('button'); ins.className = 'act primary'; ins.textContent = '📨 Вставить в ответ';
+  const ins = document.createElement('button'); ins.className = 'act primary'; ins.textContent = L('📨 Вставить в ответ');
   ins.addEventListener('click', async () => {
     ins.textContent = '⏳…';
     try { await navigator.clipboard.writeText(ta.value); } catch (e) {} // reliable fallback from the focused popup
     await tabSend(tabId, { type: 'tcaFocus', id: p.id });
     const r = await tabSend(tabId, { type: 'tcaInsert', id: p.id, text: ta.value });
-    ins.textContent = (r && r.method === 'inserted') ? '✓ В Threads' : '📋 Готово — Cmd+V';
-    setTimeout(() => (ins.textContent = '📨 Вставить в ответ'), 2600);
+    ins.textContent = (r && r.method === 'inserted') ? L('✓ В Threads') : L('📋 Готово — Cmd+V');
+    setTimeout(() => (ins.textContent = L('📨 Вставить в ответ')), 2600);
   });
   const copy = document.createElement('button'); copy.className = 'act'; copy.textContent = '📋';
   copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = '✓'; setTimeout(() => (copy.textContent = '📋'), 1200); }));
@@ -141,15 +141,15 @@ async function genItem(tabId, it, p, gen) {
 // ---------- manual box ----------
 function manualGenerate() {
   const text = $('input').value.trim();
-  if (!text) { setMsg('Вставьте текст поста в поле ниже.', true); $('input').focus(); return; }
+  if (!text) { setMsg(L('Вставьте текст поста в поле ниже.'), true); $('input').focus(); return; }
   const wrap = $('manualWrap');
-  wrap.innerHTML = '<div class="status" style="margin-top:9px">⏳ Пишу комментарий…</div>';
+  wrap.innerHTML = L('<div class="status" style="margin-top:9px">⏳ Пишу комментарий…</div>');
   $('gen').disabled = true;
   bgDraft(text, '').then(resp => {
     $('gen').disabled = false; wrap.innerHTML = '';
     if (!resp || !resp.ok) {
       if (resp && /ключ|key|openrouter/i.test(resp.error || '')) settingsLink();
-      else wrap.innerHTML = '<div class="status err" style="margin-top:9px">⚠️ ' + ((resp && resp.error) || 'нет ответа') + '</div>';
+      else wrap.innerHTML = '<div class="status err" style="margin-top:9px">⚠️ ' + ((resp && resp.error) || L('нет ответа')) + '</div>';
       return;
     }
     const ta = document.createElement('textarea'); ta.value = resp.draft; ta.rows = 4; ta.style.marginTop = '9px'; wrap.appendChild(ta);
@@ -157,9 +157,9 @@ function manualGenerate() {
     const count = document.createElement('span'); count.className = 'count'; count.textContent = [...ta.value].length + '/500';
     ta.addEventListener('input', () => count.textContent = [...ta.value].length + '/500');
     const sp = document.createElement('span'); sp.className = 'sp';
-    const copy = document.createElement('button'); copy.className = 'act primary'; copy.textContent = '📋 Скопировать';
-    copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = '✓ Скопировано'; setTimeout(() => (copy.textContent = '📋 Скопировать'), 1500); }));
-    const regen = document.createElement('button'); regen.className = 'act'; regen.textContent = '↻ Ещё';
+    const copy = document.createElement('button'); copy.className = 'act primary'; copy.textContent = L('📋 Скопировать');
+    copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = L('✓ Скопировано'); setTimeout(() => (copy.textContent = L('📋 Скопировать')), 1500); }));
+    const regen = document.createElement('button'); regen.className = 'act'; regen.textContent = L('↻ Ещё');
     regen.addEventListener('click', manualGenerate);
     row.append(count, sp, regen, copy); wrap.appendChild(row);
   });
@@ -168,27 +168,27 @@ function manualGenerate() {
 // ---------- background search now ----------
 function pollNow() {
   $('pollNow').disabled = true;
-  setMsg('⏳ Ищу новые посты по вашим темам в фоне…', false);
+  setMsg(L('⏳ Ищу новые посты по вашим темам в фоне…'), false);
   try {
     chrome.runtime.sendMessage({ type: 'pollNow' }, (r) => {
       $('pollNow').disabled = false;
-      if (chrome.runtime.lastError || !r) { setMsg('Не удалось запустить поиск. Перезагрузите расширение.', true); return; }
-      if (!r.ok) { setMsg(r.error === 'busy' ? 'Поиск уже идёт, подождите.' : 'Поиск выключен в настройках (⚙).', true); return; }
-      if (r.found > 0) setMsg('🔔 Нашёл ' + r.found + ' новых по теме «' + r.label + '». Список ниже:', false);
-      else setMsg('Новых по теме «' + r.label + '» сейчас нет. Темы чередуются. Раньше найденное — ниже:', false);
+      if (chrome.runtime.lastError || !r) { setMsg(L('Не удалось запустить поиск. Перезагрузите расширение.'), true); return; }
+      if (!r.ok) { setMsg(r.error === 'busy' ? L('Поиск уже идёт, подождите.') : L('Поиск выключен в настройках (⚙).'), true); return; }
+      if (r.found > 0) setMsg(L('🔔 Нашёл ') + r.found + L(' новых по теме «') + r.label + L('». Список ниже:'), false);
+      else setMsg(L('Новых по теме «') + r.label + L('» сейчас нет. Темы чередуются. Раньше найденное — ниже:'), false);
       renderFound();
     });
-  } catch (e) { $('pollNow').disabled = false; setMsg('Ошибка: ' + (e.message || e), true); }
+  } catch (e) { $('pollNow').disabled = false; setMsg(L('Ошибка: ') + (e.message || e), true); }
 }
 
 // Posts discovered by the background search (separate from what's on the page).
 function relTime(ts) {
   if (!ts) return '';
   const s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return 'только что';
-  const m = Math.floor(s / 60); if (m < 60) return m + ' мин';
-  const h = Math.floor(m / 60); if (h < 24) return h + ' ч';
-  return Math.floor(h / 24) + ' дн';
+  if (s < 60) return L('только что');
+  const m = Math.floor(s / 60); if (m < 60) return m + L(' мин');
+  const h = Math.floor(m / 60); if (h < 24) return h + L(' ч');
+  return Math.floor(h / 24) + L(' дн');
 }
 function renderFound() {
   chrome.storage.local.get('tcaFound', (o) => {
@@ -196,9 +196,9 @@ function renderFound() {
     $('list').innerHTML = '';
     if (!items.length) return;
     const bar = document.createElement('div'); bar.className = 'found-bar';
-    const cnt = document.createElement('span'); cnt.textContent = items.length + ' найдено в фоне';
-    const clr = document.createElement('button'); clr.className = 'act'; clr.textContent = '🗑 Очистить';
-    clr.addEventListener('click', () => chrome.storage.local.set({ tcaFound: [] }, () => { $('list').innerHTML = ''; setMsg('Список найденного очищен.', false); }));
+    const cnt = document.createElement('span'); cnt.textContent = items.length + L(' найдено в фоне');
+    const clr = document.createElement('button'); clr.className = 'act'; clr.textContent = L('🗑 Очистить');
+    clr.addEventListener('click', () => chrome.storage.local.set({ tcaFound: [] }, () => { $('list').innerHTML = ''; setMsg(L('Список найденного очищен.'), false); }));
     bar.append(cnt, clr); $('list').appendChild(bar);
     items.forEach(p => $('list').appendChild(foundItem(p)));
   });
@@ -206,15 +206,15 @@ function renderFound() {
 function foundItem(p) {
   const it = document.createElement('div'); it.className = 'it';
   const meta = document.createElement('div'); meta.className = 'it-meta';
-  const chip = document.createElement('span'); chip.className = 'it-chip' + (p.lead ? ' lead' : ''); chip.textContent = (p.lead ? '🎯 ' : '') + (p.label || p.top || 'тема');
+  const chip = document.createElement('span'); chip.className = 'it-chip' + (p.lead ? ' lead' : ''); chip.textContent = (p.lead ? '🎯 ' : '') + (p.label || p.top || L('тема'));
   const au = document.createElement('span'); au.className = 'it-author'; au.textContent = '@' + (p.author || '—');
   const tm = document.createElement('span'); tm.className = 'it-time'; tm.textContent = relTime(p.ts);
   meta.append(chip, au, tm); it.appendChild(meta);
   const sn = document.createElement('div'); sn.className = 'it-sn'; sn.textContent = (p.text || '').slice(0, 180); it.appendChild(sn);
   const row = document.createElement('div'); row.className = 'row';
-  const open = document.createElement('button'); open.className = 'act'; open.textContent = '↗ Открыть';
+  const open = document.createElement('button'); open.className = 'act'; open.textContent = L('↗ Открыть');
   open.addEventListener('click', () => chrome.tabs.create({ url: p.url || 'https://www.threads.com/' }));
-  const gen = document.createElement('button'); gen.className = 'act primary'; gen.textContent = '✨ Черновик';
+  const gen = document.createElement('button'); gen.className = 'act primary'; gen.textContent = L('✨ Черновик');
   gen.addEventListener('click', () => genFound(it, p, gen));
   const sp = document.createElement('span'); sp.className = 'sp';
   row.append(open, sp, gen); it.appendChild(row);
@@ -223,14 +223,14 @@ function foundItem(p) {
 function genFound(it, p, gen) {
   let box = it.querySelector('.it-draft');
   if (!box) { box = document.createElement('div'); box.className = 'it-draft'; it.appendChild(box); }
-  box.innerHTML = '<div class="status">⏳ Пишу комментарий…</div>'; gen.disabled = true;
+  box.innerHTML = L('<div class="status">⏳ Пишу комментарий…</div>'); gen.disabled = true;
   bgDraft(p.text, p.author).then((resp) => {
     gen.disabled = false; box.innerHTML = '';
-    if (!resp || !resp.ok) { box.innerHTML = '<div class="status err">⚠️ ' + ((resp && resp.error) || 'нет ответа') + '</div>'; return; }
+    if (!resp || !resp.ok) { box.innerHTML = '<div class="status err">⚠️ ' + ((resp && resp.error) || L('нет ответа')) + '</div>'; return; }
     const ta = document.createElement('textarea'); ta.value = resp.draft; ta.rows = 4; box.appendChild(ta);
     const row = document.createElement('div'); row.className = 'row';
     const sp = document.createElement('span'); sp.className = 'sp';
-    const openb = document.createElement('button'); openb.className = 'act primary'; openb.textContent = '↗ Открыть и вставить';
+    const openb = document.createElement('button'); openb.className = 'act primary'; openb.textContent = L('↗ Открыть и вставить');
     openb.addEventListener('click', () => { navigator.clipboard.writeText(ta.value).catch(() => {}); chrome.tabs.create({ url: p.url || 'https://www.threads.com/' }); });
     const copy = document.createElement('button'); copy.className = 'act'; copy.textContent = '📋';
     copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = '✓'; setTimeout(() => (copy.textContent = '📋'), 1200); }));
@@ -255,7 +255,7 @@ function renderPostTopics(topics) {
   });
 }
 function suggestTopics() {
-  const btn = $('suggestTopics'); const o = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Подбираю темы…';
+  const btn = $('suggestTopics'); const o = btn.textContent; btn.disabled = true; btn.textContent = L('⏳ Подбираю темы…');
   try {
     chrome.runtime.sendMessage({ type: 'suggestTopics' }, (r) => {
       btn.disabled = false; btn.textContent = o;
@@ -269,13 +269,13 @@ async function genPost(topic) {
   topic = (topic || $('postInput').value).trim();
   if (!topic) { $('postInput').focus(); return; }
   const wrap = $('postWrap');
-  wrap.innerHTML = '<div class="status" style="margin-top:9px">⏳ Пишу пост…</div>';
+  wrap.innerHTML = L('<div class="status" style="margin-top:9px">⏳ Пишу пост…</div>');
   $('genPost').disabled = true;
   const resp = await bgPost(topic);
   $('genPost').disabled = false; wrap.innerHTML = '';
   if (!resp || !resp.ok) {
-    if (resp && /ключ|key|openrouter/i.test(resp.error || '')) { wrap.innerHTML = '<div class="status err" style="margin-top:9px">Нет ключа OpenRouter — откройте ⚙</div>'; }
-    else wrap.innerHTML = '<div class="status err" style="margin-top:9px">⚠️ ' + ((resp && resp.error) || 'нет ответа') + '</div>';
+    if (resp && /ключ|key|openrouter/i.test(resp.error || '')) { wrap.innerHTML = L('<div class="status err" style="margin-top:9px">Нет ключа OpenRouter — откройте ⚙</div>'); }
+    else wrap.innerHTML = '<div class="status err" style="margin-top:9px">⚠️ ' + ((resp && resp.error) || L('нет ответа')) + '</div>';
     return;
   }
   const ta = document.createElement('textarea'); ta.value = resp.draft; ta.rows = 6; ta.style.marginTop = '9px'; wrap.appendChild(ta);
@@ -283,14 +283,15 @@ async function genPost(topic) {
   const count = document.createElement('span'); count.className = 'count'; count.textContent = [...ta.value].length + '/500';
   ta.addEventListener('input', () => count.textContent = [...ta.value].length + '/500');
   const sp = document.createElement('span'); sp.className = 'sp';
-  const copy = document.createElement('button'); copy.className = 'act primary'; copy.textContent = '📋 Скопировать';
-  copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = '✓ Скопировано'; setTimeout(() => (copy.textContent = '📋 Скопировать'), 1500); }));
-  const regen = document.createElement('button'); regen.className = 'act'; regen.textContent = '↻ Ещё';
+  const copy = document.createElement('button'); copy.className = 'act primary'; copy.textContent = L('📋 Скопировать');
+  copy.addEventListener('click', () => navigator.clipboard.writeText(ta.value).then(() => { copy.textContent = L('✓ Скопировано'); setTimeout(() => (copy.textContent = L('📋 Скопировать')), 1500); }));
+  const regen = document.createElement('button'); regen.className = 'act'; regen.textContent = L('↻ Ещё');
   regen.addEventListener('click', () => genPost(topic));
   row.append(count, sp, regen, copy); wrap.appendChild(row);
 }
 
 // ---------- wire up ----------
+if (typeof tcaLocalizeDom === 'function') tcaLocalizeDom();
 buildThemes();
 $('scan').addEventListener('click', loadSuggestions);
 $('pollNow').addEventListener('click', pollNow);
