@@ -25,8 +25,8 @@ function buildMessages(s, text, author, product, tone, samples) {
   const focusBlock = (product && product.name)
     ? `\nFOCUS PRODUCT: the user picked this post specifically to write about ${product.name}. Feature ${product.name} (${product.desc}).${product.url ? ' You may add its link once: ' + product.url + '.' : ''} Introduce it naturally and value-first, describe it accurately, no hard sell. Do not mention other products.\n`
     : '';
-  const toneBlock = tone === 'humor' ? '\nTONE: short, witty, with light sarcasm - still kind, never offensive.\n'
-    : tone === 'mentor' ? '\nTONE: a calm mentor/advisor - concrete, structured, genuinely helpful, no jokes.\n'
+  const toneBlock = tone === 'humor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): make this comment genuinely witty with light sarcasm — a small joke or playful jab, still kind and never offensive. Even if the post is serious, keep it light and funny. The result MUST read clearly more humorous than a neutral reply.\n'
+    : tone === 'mentor' ? '\nTONE OVERRIDE (HIGHEST PRIORITY — overrides any tone guidance in RULES): write as a calm, experienced mentor — serious, structured, concrete step-by-step advice from experience. No jokes, no sarcasm, no small talk.\n'
     : '';
 
   const system =
@@ -47,7 +47,7 @@ HARD CONSTRAINTS:
 - Length up to 480 characters. A normal comment is 1-3 sentences; a showcase portfolio is 2-4.
 - Must be relevant and add genuine value (insight, experience, or a sincere question).
 - Describe any product ACCURATELY (see RULES) — never invent vague positioning.
-- No hashtags, no @mentions. You MAY include ONE link — only the featured product's official URL — if it genuinely helps; never other links. One emoji max (only if natural).
+- No hashtags, no @mentions. NEVER copy or cite any link/URL from the post, and NEVER invent links to news or external sites. The ONLY link allowed is the official URL of YOUR OWN product when you feature it; otherwise include no link at all. One emoji max (only if natural).
 - ${focusBlock ? 'Feature exactly the FOCUS PRODUCT above, and only that one.' : showcase ? 'This is a showcase post: a short portfolio of your products (if configured) is expected.' : 'Mention a product ONLY if truly relevant, softly, at most one.'}
 - Output ONLY the comment text — no quotes, no preamble.`;
 
@@ -96,6 +96,24 @@ function getSamples() {
   return new Promise(res => chrome.storage.local.get('tcaSamples', o => res((o.tcaSamples || []).slice(0, 6))));
 }
 
+// Keep only links to YOUR configured product domains; strip foreign/news links the model may pull from the post.
+function allowedDomains() {
+  try {
+    return (typeof TCA_PRODUCTS !== 'undefined' ? TCA_PRODUCTS : [])
+      .map(p => String(p.url || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''))
+      .filter(Boolean);
+  } catch (e) { return []; }
+}
+const LINK_RE = /(https?:\/\/)?((?:[a-z0-9-]+\.)+(?:com|net|org|io|link|cloud|app|dev|co|ai|shop|store|info|biz|me|xyz|news|blog|site|online|tech|ua|ru|pl|de|uk|us|gg|tv))\b(\/[^\s)]*)?/gi;
+function stripForeignLinks(text) {
+  const allow = allowedDomains();
+  return String(text).replace(LINK_RE, (m, proto, domain) => {
+    const d = String(domain).toLowerCase().replace(/^www\./, '');
+    if (allow.some(a => d === a || d.endsWith('.' + a))) return m; // keep your own product links
+    return ''; // drop foreign links / news domains
+  }).replace(/\(\s*\)/g, '').replace(/[ \t]{2,}/g, ' ').replace(/\s+([.,!?:;])/g, '$1').trim();
+}
+
 async function generate(s, messages, maxChars) {
   const r = await fetch(OPENROUTER, {
     method: 'POST',
@@ -112,6 +130,7 @@ async function generate(s, messages, maxChars) {
   if (!r.ok || j.error) return { ok: false, error: (j.error && j.error.message) || ('HTTP ' + r.status) };
   let out = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
   out = String(out).trim().replace(/^["'«»“”\s]+|["'«»“”\s]+$/g, '').replace(/\s*[—–]\s*/g, ' - ');
+  out = stripForeignLinks(out);
   const lim = maxChars || 480;
   if ([...out].length > lim) out = [...out].slice(0, lim - 1).join('') + '…';
   if (!out) return { ok: false, error: 'Пустой ответ модели.' };

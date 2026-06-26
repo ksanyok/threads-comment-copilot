@@ -56,8 +56,8 @@ function tcaRelevance(text) {
 // follows/likes on the Activity page (you only answer where someone replied to you).
 function tcaNotifKind(text) {
   const t = ' ' + String(text || '').toLowerCase().replace(/\s+/g, ' ') + ' ';
-  if (/відповів|відповіла|відповіли|відповід\w*.{0,12}вам|прокоментува|replied|commented|ответил|ответила|ответили/.test(t)) return 'reply';
-  if (/підпис\w*.{0,15}(на вас|вас|вами)|стеж\w*.{0,12}(вами|вас)|started following you|follow(ed|s)? you|вподоба\w*|сподоба\w*|liked your|like your|вам сподоба|репост|reposted|поділ\w*.{0,12}(ваш|вас)|згада\w*.{0,10}вас|mentioned you/.test(t)) return 'social';
+  if (/відповів|відповіла|відповіли|відповід\w*.{0,12}вам|прокоментува|replied|commented|ответил|ответила|ответили|прокомментир/.test(t)) return 'reply';
+  if (/(під|под)пис\w*.{0,15}(на вас|вас|вами)|стеж\w*.{0,12}(вами|вас)|started following you|follow(ed|s)? you|вподоба\w*|сподоба\w*|оцінив\w*|оценил\w*|понрав\w*|liked your|like your|вам сподоба|вашу публика|вашу публікаці|репост|reposted|поділ\w*.{0,12}(ваш|вас)|поделил\w*.{0,12}(ваш|вас)|згада\w*.{0,10}вас|упомян\w*.{0,10}вас|mentioned you/.test(t)) return 'social';
   return 'post';
 }
 

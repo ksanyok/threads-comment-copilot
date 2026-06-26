@@ -104,17 +104,21 @@
   }
 
   function collect() {
+    const onActivity = /\/activity/i.test(location.pathname);
     const m = new Map();
     for (const el of findContainers()) {
       const author = postAuthor(el).toLowerCase();
       const urlHandle = (postUrl(el).toLowerCase().match(/\/@([^\/?#]+)/) || [])[1] || '';
-      if (MINE && (author === MINE || urlHandle === MINE)) { el.dataset.tcaMine = '1'; captureSample(postText(el)); continue; } // exclude my own threads (by author or permalink handle), but learn my style from them
+      const text0 = postText(el);
+      // follows / likes / reposts -> nothing to reply to (RU + UA wording)
+      if (KIND(text0) === 'social') { stripUi(el); el.dataset.tcaUi = 'skip'; continue; }
+      // exclude MY OWN threads in feeds — but NOT on the Activity page, where replies to my
+      // posts (which link to my own permalink) are exactly what I want to answer.
+      if (!onActivity && MINE && (author === MINE || urlHandle === MINE)) { el.dataset.tcaMine = '1'; captureSample(text0); continue; }
       const p = enrich(el);
       if (p.text.length < 30) continue;
-      // skip follow/like/repost notifications (Activity page) — only reply where someone replied to you
-      if (KIND(p.text) === 'social') { stripUi(el); el.dataset.tcaUi = 'skip'; continue; }
-      // already replied by me (detected in thread DOM) -> remember as commented
-      if (MINE && author !== MINE && el.querySelector('a[href^="/@' + MINE + '"]')) markCommented(p.id);
+      // "already replied by me" heuristic — skip it on Activity (the item embeds my own post link as context)
+      if (!onActivity && MINE && author !== MINE && el.querySelector('a[href^="/@' + MINE + '"]')) markCommented(p.id);
       p.done = commented.has(p.id);
       const prev = m.get(p.id);
       if (!prev || p.score > prev.score) m.set(p.id, p);
