@@ -19,6 +19,12 @@
     el.querySelectorAll(':scope > .tca-dot, :scope > .tca-chip, :scope > .tca-btn, :scope > .tca-done-mark').forEach(n => n.remove());
   });
 
+  // When the extension is reloaded/updated, THIS already-injected script becomes an
+  // orphan: its chrome.* calls throw "Extension context invalidated" and flood the
+  // chrome://extensions Errors panel. extAlive() lets the orphan notice and go quiet
+  // (refreshing the Threads tab loads the fresh script).
+  function extAlive() { try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; } }
+
   const REL = (typeof tcaRelevance === 'function') ? tcaRelevance : () => ({ score: 0, topics: [], top: '', lead: false });
   const KIND = (typeof tcaNotifKind === 'function') ? tcaNotifKind : () => 'post';
   let PRODUCTS = (typeof TCA_PRODUCTS !== 'undefined' && TCA_PRODUCTS.length) ? TCA_PRODUCTS : [];
@@ -40,9 +46,9 @@
     if (area === 'local' && ch[COMMENTED_KEY]) { commented = new Set(ch[COMMENTED_KEY].newValue || []); scan(); }
   });
   function markCommented(id) {
-    if (!id || commented.has(id)) return;
+    if (!id || commented.has(id) || !extAlive()) return;
     commented.add(id);
-    chrome.storage.local.set({ [COMMENTED_KEY]: [...commented].slice(-1000) });
+    try { chrome.storage.local.set({ [COMMENTED_KEY]: [...commented].slice(-1000) }); } catch (e) {}
   }
 
   // Learn my style: capture my own posts/comments as voice samples for generation.
@@ -53,17 +59,19 @@
     if (text.length < 40 || text.length > 600 || sampleSet.has(text)) return;
     sampleSet.add(text);
     clearTimeout(sampleT);
-    sampleT = setTimeout(() => chrome.storage.local.set({ tcaSamples: [...sampleSet].slice(-50) }), 1500);
+    sampleT = setTimeout(() => { if (!extAlive()) return; try { chrome.storage.local.set({ tcaSamples: [...sampleSet].slice(-50) }); } catch (e) {} }, 1500);
   }
 
   // History of what we wrote (newest first), so we can show it and block re-writing.
   function recordHistory(entry) {
-    if (!entry || !entry.id) return;
-    chrome.storage.local.get('tcaHistory', (o) => {
-      let h = (o.tcaHistory || []).filter(x => x.id !== entry.id);
-      h.unshift({ id: entry.id, author: entry.author || '', text: entry.text || '', ts: Date.now(), cost: +entry.cost || 0 });
-      chrome.storage.local.set({ tcaHistory: h.slice(0, 200) });
-    });
+    if (!entry || !entry.id || !extAlive()) return;
+    try {
+      chrome.storage.local.get('tcaHistory', (o) => {
+        let h = (o.tcaHistory || []).filter(x => x.id !== entry.id);
+        h.unshift({ id: entry.id, author: entry.author || '', text: entry.text || '', ts: Date.now(), cost: +entry.cost || 0 });
+        chrome.storage.local.set({ tcaHistory: h.slice(0, 200) });
+      });
+    } catch (e) {}
   }
 
   // ---------- post extraction ----------
@@ -703,6 +711,7 @@
 
   // ---------- scan loop ----------
   function scan() {
+    if (!extAlive()) { try { if (mo) mo.disconnect(); } catch (e) {} return; } // orphaned after reload -> stop quietly
     const posts = collect();
     posts.forEach(decorate);
     const rel = posts.filter(p => p.score >= 1 && !p.done);
@@ -718,8 +727,8 @@
       const l = document.querySelector('#tca-sidebar .tca-sb-list'); if (l) renderList(l);
     }
   }
-  let t = null;
-  new MutationObserver(() => { clearTimeout(t); t = setTimeout(scan, 600); })
-    .observe(document.documentElement, { childList: true, subtree: true });
+  let t = null, mo = null;
+  mo = new MutationObserver(() => { clearTimeout(t); t = setTimeout(scan, 600); });
+  mo.observe(document.documentElement, { childList: true, subtree: true });
   scan();
 })();

@@ -3,7 +3,7 @@ importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, 
 importScripts('i18n.js'); // provides L() for localized notifications/errors
 try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
-const TCA_BUILD = '1.1.4'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
+const TCA_BUILD = '1.1.5'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
 
 function getSettings() {
   return new Promise(res => chrome.storage.sync.get(TCA_DEFAULTS, res));
