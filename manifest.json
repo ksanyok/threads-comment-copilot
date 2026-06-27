@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Threads Comment Assistant",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Reply on Threads in your own voice with AI. Finds relevant threads, drafts the comment - you review and post. Nothing automatic.",
   "permissions": ["storage", "alarms", "notifications", "scripting"],
   "host_permissions": [
