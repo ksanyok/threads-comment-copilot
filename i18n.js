@@ -41,6 +41,8 @@ var TCA_MSG = {
   'токенов': { en: 'tokens', uk: 'токенів' },
   'сбросить': { en: 'reset', uk: 'скинути' },
   'Обнулить счётчик затрат': { en: 'Reset the spend counter', uk: 'Обнулити лічильник витрат' },
+  'Всего': { en: 'Total', uk: 'Всього' },
+  '/шт': { en: '/ea', uk: '/шт' },
   'Готово. Проверьте и нажмите «Опублікувати» в Threads.': { en: 'Done. Review and press “Post” in Threads.', uk: 'Готово. Перевірте та натисніть «Опублікувати» у Threads.' },
   'Скопировано в буфер. Откройте ответ и вставьте (Cmd/Ctrl+V).': { en: 'Copied to clipboard. Open the reply and paste (Cmd/Ctrl+V).', uk: 'Скопійовано в буфер. Відкрийте відповідь і вставте (Cmd/Ctrl+V).' },
   'Черновик скопирован. Откройте пост и вставьте (Cmd/Ctrl+V).': { en: 'Draft copied. Open the post and paste (Cmd/Ctrl+V).', uk: 'Чернетку скопійовано. Відкрийте пост і вставте (Cmd/Ctrl+V).' },

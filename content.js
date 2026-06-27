@@ -273,6 +273,7 @@
     const toneMap = { humor: L('С юмором'), mentor: L('Менторски'), neutral: L('Авто'), auto: L('Авто') };
     const tag = document.createElement('div'); tag.className = 'tca-build';
     tag.textContent = '✓ ' + (toneMap[resp.tone] || resp.tone || '—')
+      + (resp.model ? '  ·  ' + String(resp.model).split('/').pop() : '')
       + (resp.build ? '  ·  v' + resp.build : '  ·  ' + L('старая сборка — перезагрузите расширение'))
       + (resp.cost != null ? '  ·  ' + fmtCost(resp.cost) : '');
     body.appendChild(tag);
@@ -504,7 +505,9 @@
       // Actual spend on the AI (real OpenRouter cost), always shown at the top.
       const spend = document.createElement('div'); spend.className = 'tca-spend';
       const lead = document.createElement('span'); lead.className = 'tca-spend-lead';
-      lead.innerHTML = '<b>' + fmtCost(u.cost) + '</b> · ' + (u.calls || 0) + ' ' + L('запросов') + ' · ' + fmtTok(u.tokens) + ' ' + L('токенов');
+      const avg = u.calls ? u.cost / u.calls : 0;
+      lead.innerHTML = L('Всего') + ': <b>' + fmtCost(u.cost) + '</b> · ' + (u.calls || 0) + ' ' + L('запросов') + ' · ~' + fmtCost(avg) + L('/шт');
+      lead.title = fmtTok(u.tokens) + ' ' + L('токенов');
       const rst = document.createElement('button'); rst.className = 'tca-spend-rst'; rst.textContent = L('сбросить');
       rst.title = L('Обнулить счётчик затрат');
       rst.onclick = () => chrome.storage.local.set({ tcaUsage: { cost: 0, tokens: 0, calls: 0, since: Date.now() } }, () => renderHistory(list));
