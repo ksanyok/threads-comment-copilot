@@ -14,6 +14,11 @@ const REC = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite', 'google/
 function isRec(id) { return REC.some(r => id.indexOf(r) === 0 || id.indexOf(r) > -1); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function price(p) { p = +p; if (!p) return '—'; const m = p * 1e6; return '$' + (m < 1 ? m.toFixed(3) : m.toFixed(2)); }
+// Estimated cost of ONE typical comment (~2600 input + 160 output tokens) so the real
+// price is tangible at selection time (per-million numbers are easy to misjudge).
+function estComment(m) { try { return (+m.pricing.prompt) * 2600 + (+m.pricing.completion) * 160; } catch (e) { return 0; } }
+function estFmt(c) { c = +c || 0; if (!c) return '—'; return '$' + (c >= 0.001 ? c.toFixed(4) : Number(c.toPrecision(2))); }
+function estColor(c) { return c <= 0.001 ? '#1a7f37' : c <= 0.01 ? '#b26a00' : '#c0392b'; } // green / amber / red
 
 async function loadModels() {
   const tiles = document.getElementById('modelTiles');
@@ -43,7 +48,9 @@ function renderModels() {
   if (!list.length) { tiles.textContent = L('Ничего не найдено.'); return; }
   list.forEach(m => {
     const t = document.createElement('div'); t.className = 'tile' + (m.id === selectedModel ? ' on' : '');
+    const ec = estComment(m);
     t.innerHTML = '<div class="nm">' + esc(m.name || m.id) + '</div><div class="id">' + esc(m.id) + '</div>' +
+      '<div class="est" style="font-weight:700;margin:3px 0 1px;color:' + estColor(ec) + '">≈ ' + estFmt(ec) + L(' / коммент') + '</div>' +
       L('<div class="pr">вход <b>') + price(m.pricing.prompt) + L('</b> · выход <b>') + price(m.pricing.completion) + '</b></div>';
     t.onclick = () => { selectedModel = m.id; document.getElementById('model').value = m.id; renderModels(); };
     tiles.appendChild(t);
