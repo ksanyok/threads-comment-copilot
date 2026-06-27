@@ -3,7 +3,7 @@ importScripts('defaults.js'); // provides self.TCA_DEFAULTS (key, model, voice, 
 importScripts('i18n.js'); // provides L() for localized notifications/errors
 try { importScripts('config.local.js'); } catch (e) {} // optional local-only key; absent in the published build
 const OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
-const TCA_BUILD = '1.1.5'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
+const TCA_BUILD = '1.1.6'; // shown in the card so you can confirm the worker is fresh (reload the EXTENSION to update it)
 
 function getSettings() {
   return new Promise(res => chrome.storage.sync.get(TCA_DEFAULTS, res));
@@ -31,7 +31,7 @@ function samplesBlock(samples) {
 function buildMessages(s, text, author, product, tone, samples) {
   const lang = (s.language && s.language.toLowerCase() !== 'auto')
     ? `Write the comment in this language: ${s.language}.`
-    : 'LANGUAGE: if the post is in English, reply in English; for ANY other language (including Russian or Ukrainian) reply in UKRAINIAN. Never reply in Russian.';
+    : 'LANGUAGE: if the post is in Russian OR Ukrainian, reply in UKRAINIAN (never in Russian). For ANY OTHER language, reply in the SAME language as the post (English -> English, Polish -> Polish, German -> German, Spanish -> Spanish, etc.). Match the post language exactly.';
 
   const showcase = !product && (typeof tcaShowcase === 'function') && tcaShowcase(text);
   const showcaseBlock = showcase
